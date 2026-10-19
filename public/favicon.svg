@@ -1,0 +1,11 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="64" height="64" rx="16" fill="#FDF8F3"/>
+  <g transform="translate(14, 12)">
+    <!-- Left petal: Teal -->
+    <path d="M12 36C6 36 2 28 2 18C14 18 20 26 20 36H12Z" fill="#1F5450" transform="rotate(-30 11 27)"/>
+    <!-- Right petal: Coral -->
+    <path d="M24 36C30 36 34 28 34 18C22 18 16 26 16 36H24Z" fill="#E27650" transform="rotate(30 25 27)"/>
+    <!-- Center top petal: Peach -->
+    <path d="M18 30C13 30 11 22 11 12C21 12 25 20 25 30H18Z" fill="#F3A06F" transform="rotate(5 18 21)"/>
+  </g>
+</svg>
