@@ -10,7 +10,7 @@ const photos = {
   aditya: "/images/aditya-reference.png",
   shashank: "/images/shashank-reference.png",
   hero: "/images/hero-reference.png",
-  notebook: "/images/notebook-reference.png",
+  notebook: "/images/notebook-reference.png?v=3",
 };
 
 function Icon({
@@ -141,17 +141,13 @@ function Hero() {
       <section className="hero">
         <div className="hero-copy">
           <p className="eyebrow">More Than a Match</p>
-          <h1>Meet people who<br />truly align with you</h1>
+          <h1><span>Meet people who</span><br /><span>truly align with you</span></h1>
           <p className="lead">Thoughtful questions. Deeper compatibility.<br />A calmer way to meet the right people.</p>
           <div className="hero-actions"><PrimaryButton>View Today’s Matches</PrimaryButton><a href="#questions">Continue Your Questions</a></div>
         </div>
         <div className="hero-art">
-          <div className="peach-disc" />
-          <div className="hand-note hero-note">Better<br />Conversations<br />Brighter<br />Connections<i /></div>
-          <img src={photos.hero} alt="A warm sunlit desk overlooking the mountains" />
-          <div className="botanical hero-leaves"><span /><span /><span /><span /><span /></div>
+          <img src={photos.hero} alt="Better Conversations, Brighter Connections — Values, Interests, Lifestyle, Personality, and More" />
         </div>
-        <div className="values-list">{["Values", "Interests", "Lifestyle", "Personality", "And More"].map((x) => <span key={x}>{x}</span>)}</div>
       </section>
       <section className="matches-section" id="matches">
         <div className="matches-heading"><h2>Today’s Matches</h2><p>Curated for you based on your answers and preferences.</p><a href="#matches">See All Matches <Arrow /></a></div>
@@ -267,7 +263,15 @@ function Stories() {
   const move = (direction: number) => setOffset((offset + direction + stories.length) % stories.length);
   return (
     <section className="stories">
-      <div className="stories-copy"><p className="eyebrow">Real Stories</p><h2>Meaningful<br />Connections Happen Here</h2><p>Hear from people who found more than just a match.</p><div><button onClick={() => move(-1)} aria-label="Previous stories">←</button><button onClick={() => move(1)} aria-label="Next stories">→</button></div></div>
+      <div className="stories-copy">
+        <p className="eyebrow">Real Stories</p>
+        <h2>Meaningful<br />Connections<br />Happen Here</h2>
+        <p>Hear from people who found more than just a match.</p>
+        <div>
+          <button onClick={() => move(-1)} aria-label="Previous stories">←</button>
+          <button onClick={() => move(1)} aria-label="Next stories">→</button>
+        </div>
+      </div>
       <div className="story-grid">{visible.map((story, index) => <article className="story-card" key={`${story.name}-${index}`}><div className="story-quote"><b>“</b><p>{story.quote}</p></div><div className="story-person"><img src={story.photo} alt="" /><p><strong>{story.name}</strong><span>{story.city}</span></p></div></article>)}</div>
     </section>
   );
@@ -298,5 +302,20 @@ function Footer() {
 }
 
 export default function App() {
-  return <main><Header /><Hero /><Compatibility /><Questions /><Guided /><Profile /><Journey /><Stories /><CTA /><Footer /></main>;
+  return (
+    <>
+      <Header />
+      <main>
+        <Hero />
+        <Compatibility />
+        <Questions />
+        <Guided />
+        <Profile />
+        <Journey />
+        <Stories />
+        <CTA />
+        <Footer />
+      </main>
+    </>
+  );
 }
