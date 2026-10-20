@@ -1,4 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
+import ProfilePage from "./pages/ProfilePage";
 
 const photos = {
   aarohi: "/images/aarohi-reference.png",
@@ -117,18 +121,64 @@ function MatchCard({ match }: { match: (typeof matches)[number] }) {
   );
 }
 
-function Header() {
+function Header({ onNavigate }: { onNavigate: (path: string) => void }) {
   const [open, setOpen] = useState(false);
+  const { user } = useAuth();
   return (
     <header className="site-header" id="top">
-      <Logo />
+      <a
+        className="logo"
+        href="/"
+        onClick={(e) => {
+          e.preventDefault();
+          onNavigate("/");
+        }}
+        aria-label="Saanjh home"
+      >
+        <span className="logo-mark"><i /><i /><i /></span>
+        <span>Saanjh</span>
+      </a>
       <nav className={open ? "open" : ""}>
-        {["Home", "Matches", "Questions", "Messages", "Insights"].map((item) => <a className={item === "Home" ? "active" : ""} href={`#${item.toLowerCase()}`} key={item}>{item}</a>)}
+        {["Home", "Matches", "Questions", "Messages", "Insights"].map((item) => (
+          <a
+            className={item === "Home" ? "active" : ""}
+            href={`#${item.toLowerCase()}`}
+            key={item}
+            onClick={() => setOpen(false)}
+          >
+            {item}
+          </a>
+        ))}
       </nav>
       <div className="user-nav">
         <button aria-label="Search"><Icon name="search" /></button>
         <button className="notification" aria-label="Notifications"><Icon name="bell" /><i /></button>
-        <a className="login-button" href="#login"><Icon name="user" size={16} /><span>Login</span></a>
+        {user ? (
+          <button
+            type="button"
+            className="user-logged-in-pill"
+            onClick={() => onNavigate("/profile")}
+            aria-label="View your profile"
+          >
+            <span className="user-pill-avatar">
+              {user.profilePhoto ? (
+                <img src={user.profilePhoto} alt={user.fullName} />
+              ) : (
+                <span>{user.fullName.charAt(0).toUpperCase()}</span>
+              )}
+            </span>
+            <span className="user-pill-name">{user.displayName || user.fullName}</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="login-button"
+            onClick={() => onNavigate("/login")}
+          >
+            <Icon name="user" size={16} />
+            <span>Login</span>
+          </button>
+        )}
       </div>
       <button className="menu-button" onClick={() => setOpen(!open)} aria-label="Toggle menu"><Icon name="menu" /></button>
     </header>
@@ -277,23 +327,46 @@ function Stories() {
   );
 }
 
-function CTA() {
+function CTA({ onNavigate }: { onNavigate: (path: string) => void }) {
+  const { user } = useAuth();
   return (
     <section className="cta exact-cta">
-      <div><h2>Ready to meet people<br />who truly align with you?</h2><p>Answer thoughtful questions, get curated matches<br />and start meaningful conversations today.</p><PrimaryButton>Create Your Account</PrimaryButton></div>
+      <div>
+        <h2>Ready to meet people<br />who truly align with you?</h2>
+        <p>Answer thoughtful questions, get curated matches<br />and start meaningful conversations today.</p>
+        <div onClick={() => onNavigate(user ? "/profile" : "/signup")} style={{ display: "inline-block", cursor: "pointer" }}>
+          <PrimaryButton>{user ? "Manage Your Profile" : "Create Your Account"}</PrimaryButton>
+        </div>
+      </div>
       <div className="hand-note cta-note">Same<br />Vibes<br />Deeper<br />Connections<i /></div>
     </section>
   );
 }
 
-function Footer() {
+function Footer({ onNavigate }: { onNavigate: (path: string) => void }) {
   return (
     <footer>
       <div className="footer-grid">
-        <Logo />
+        <a
+          className="logo"
+          href="/"
+          onClick={(e) => {
+            e.preventDefault();
+            onNavigate("/");
+          }}
+          aria-label="Saanjh home"
+        >
+          <span className="logo-mark"><i /><i /><i /></span>
+          <span>Saanjh</span>
+        </a>
         <div><h3>Product</h3>{["Home", "Matches", "Questions", "Insights"].map((x) => <a href={`#${x.toLowerCase()}`} key={x}>{x}</a>)}</div>
         <div><h3>Support</h3>{["Help Center", "Safety", "Community Guidelines", "Contact Us"].map((x) => <a href="#top" key={x}>{x}</a>)}</div>
-        <div><h3>Company</h3>{["About", "Privacy Policy", "Terms of Service", "Careers"].map((x) => <a href="#top" key={x}>{x}</a>)}</div>
+        <div>
+          <h3>Account</h3>
+          <a href="/login" onClick={(e) => { e.preventDefault(); onNavigate("/login"); }}>Sign In</a>
+          <a href="/signup" onClick={(e) => { e.preventDefault(); onNavigate("/signup"); }}>Create Account</a>
+          <a href="/profile" onClick={(e) => { e.preventDefault(); onNavigate("/profile"); }}>My Profile</a>
+        </div>
         <div className="newsletter"><h3>Stay in the loop</h3><form onSubmit={(event) => event.preventDefault()}><input aria-label="Email address" placeholder="Enter your email" type="email" /><button aria-label="Subscribe">→</button></form><div className="socials"><a href="#top" aria-label="Instagram"><Icon name="instagram" /></a><a href="#top" aria-label="X"><Icon name="x" /></a><a href="#top" aria-label="LinkedIn"><Icon name="linkedin" /></a><a href="#top" aria-label="YouTube"><Icon name="youtube" /></a></div></div>
       </div>
       <div className="footer-bottom"><span>© 2026 Saanjh. All rights reserved.</span><span>Building a kinder, more connected world.</span></div>
@@ -301,10 +374,69 @@ function Footer() {
   );
 }
 
-export default function App() {
+function ToastNotification() {
+  const { toast, clearToast } = useAuth();
+  if (!toast) return null;
+  return (
+    <div className="saanjh-toast-container">
+      <div className={`saanjh-toast ${toast.type}`}>
+        <span>{toast.type === "success" ? "✓" : toast.type === "error" ? "⚠" : "ℹ"}</span>
+        <span>{toast.message}</span>
+        <button className="saanjh-toast-close" onClick={clearToast} aria-label="Dismiss message">✕</button>
+      </div>
+    </div>
+  );
+}
+
+function MainContent() {
+  const [currentPath, setCurrentPath] = useState<string>(() => {
+    const path = window.location.pathname.toLowerCase();
+    const hash = window.location.hash.toLowerCase();
+    if (path === "/login" || hash === "#login") return "/login";
+    if (path === "/signup" || hash === "#signup") return "/signup";
+    if (path === "/profile" || hash === "#profile") return "/profile";
+    return "/";
+  });
+
+  const navigate = (path: string) => {
+    window.history.pushState({}, "", path);
+    setCurrentPath(path);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    const handleLocation = () => {
+      const path = window.location.pathname.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+      if (path === "/login" || hash === "#login") setCurrentPath("/login");
+      else if (path === "/signup" || hash === "#signup") setCurrentPath("/signup");
+      else if (path === "/profile" || hash === "#profile") setCurrentPath("/profile");
+      else setCurrentPath("/");
+    };
+
+    window.addEventListener("popstate", handleLocation);
+    window.addEventListener("hashchange", handleLocation);
+    return () => {
+      window.removeEventListener("popstate", handleLocation);
+      window.removeEventListener("hashchange", handleLocation);
+    };
+  }, []);
+
+  if (currentPath === "/login") {
+    return <LoginPage onNavigate={navigate} />;
+  }
+
+  if (currentPath === "/signup") {
+    return <SignupPage onNavigate={navigate} />;
+  }
+
+  if (currentPath === "/profile") {
+    return <ProfilePage onNavigate={navigate} />;
+  }
+
   return (
     <>
-      <Header />
+      <Header onNavigate={navigate} />
       <main>
         <Hero />
         <Compatibility />
@@ -313,9 +445,18 @@ export default function App() {
         <Profile />
         <Journey />
         <Stories />
-        <CTA />
-        <Footer />
+        <CTA onNavigate={navigate} />
+        <Footer onNavigate={navigate} />
       </main>
     </>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <MainContent />
+      <ToastNotification />
+    </AuthProvider>
   );
 }

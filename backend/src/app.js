@@ -1,0 +1,83 @@
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const cookieParser = require('cookie-parser');
+const morgan = require('morgan');
+
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+const { getDBStatus } = require('./config/db');
+const { notFoundHandler, errorHandler } = require('./middleware/errorMiddleware');
+
+const app = express();
+
+// Security HTTP headers
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
+
+// Determine allowed CORS origins
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost:8443',
+  'http://localhost:8443',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:8443',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:3000',
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps, curl, Postman)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+        return callback(null, true);
+      }
+      return callback(new Error(`Origin ${origin} not allowed by CORS`));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  })
+);
+
+// Body parsing
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
+
+// Request logging in development
+if (process.env.NODE_ENV !== 'test') {
+  app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+}
+
+// Health Check Endpoint
+app.get('/api/health', (req, res) => {
+  const dbStatus = getDBStatus();
+  res.status(200).json({
+    status: 'ok',
+    service: 'saanjh-backend',
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+    database: {
+      connected: dbStatus.isConnected,
+      state: dbStatus.readyState === 1 ? 'connected' : 'disconnected',
+    },
+  });
+});
+
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+
+// Centralized 404 handler
+app.use(notFoundHandler);
+
+// Centralized error handler
+app.use(errorHandler);
+
+module.exports = app;

@@ -49,7 +49,26 @@ pnpm install
 
 ### 2. Run locally
 
+#### Option A: Run Frontend & Backend Independently
+
 ```bash
+# Terminal 1: Backend API (runs on http://localhost:5000)
+cd backend
+npm install
+npm run dev
+
+# Terminal 2: Frontend (runs on http://localhost:8443)
+pnpm install
+pnpm dev
+```
+
+#### Option B: From the Project Root
+
+```bash
+# Start backend from root
+npm run backend:dev
+
+# In another terminal, start frontend
 pnpm dev
 ```
 
@@ -61,23 +80,58 @@ Open [http://localhost:8443](http://localhost:8443) in your browser.
 pnpm build
 ```
 
-This compiles optimized static assets into the `dist/` directory, ready to drop onto Render, Vercel, Netlify, or Cloudflare Pages.
+This compiles optimized static assets into the `dist/` directory, ready to deploy to Render, Vercel, Netlify, or Cloudflare Pages.
 
 ---
 
 ## Project Structure
 
 ```text
-├── public/
-│   ├── favicon.svg             # Saanjh 3-petal brand icon
-│   └── images/                 # Portrait & reference photography
-├── src/
-│   ├── App.tsx                 # Main layout and sections
-│   ├── index.css               # Design tokens, typography & Tailwind styles
-│   └── main.tsx                # React root entrypoint
-├── index.html                  # HTML shell
-├── render.yaml                 # Render static site blueprint
-└── vite.config.ts              # Clean Vite + Tailwind v4 config
+Saanjh/
+├── backend/                       # Dedicated Node.js & Express Backend Application
+│   ├── src/
+│   │   ├── config/
+│   │   │   └── db.js              # MongoDB Atlas connection & resilient failover
+│   │   ├── models/
+│   │   │   └── User.js            # Mongoose schema, validation, bcrypt hashing
+│   │   ├── controllers/
+│   │   │   ├── authController.js  # Signup, Login, Google OAuth, Logout, Me
+│   │   │   └── userController.js  # Profile retrieval, updates & photo management
+│   │   ├── routes/
+│   │   │   ├── authRoutes.js      # Rate-limited auth routes
+│   │   │   └── userRoutes.js      # Authenticated user profile routes
+│   │   ├── middleware/
+│   │   │   ├── authMiddleware.js  # JWT Cookie / Bearer verification & RBAC
+│   │   │   └── errorMiddleware.js # Centralized Zod, MongoDB & 500 handler
+│   │   ├── services/
+│   │   │   └── googleAuthService.js # Official Google ID token verification
+│   │   ├── app.js                 # Express app, Helmet, CORS & rate limiters
+│   │   └── server.js              # Server entry point & graceful shutdown
+│   ├── tests/
+│   │   └── auth.test.js           # Automated integration test suite
+│   ├── .env                       # Local backend secrets (git ignored)
+│   ├── .env.example               # Template for backend secrets
+│   ├── .gitignore                 # Backend-specific ignore rules
+│   ├── package.json               # Backend dependencies & npm scripts
+│   └── README.md                  # Comprehensive backend API documentation
+│
+├── public/                        # Static assets (brand icons & photography)
+│   ├── favicon.svg
+│   └── images/
+├── src/                           # React 19 Frontend Application
+│   ├── components/
+│   │   └── AuthModal.tsx          # Login, Signup, Google Auth & Profile dialogs
+│   ├── context/
+│   │   └── AuthContext.tsx        # React Auth Context with session persistence
+│   ├── services/
+│   │   └── api.ts                 # Full API client connected to backend
+│   ├── App.tsx                    # Main layout and sections
+│   ├── index.css                  # Design tokens, typography & auth styling
+│   └── main.tsx                   # React root entrypoint
+├── index.html                     # HTML shell with Google Identity Services
+├── package.json                   # Frontend dependencies & root helper scripts
+├── render.yaml                    # Deployment blueprint
+└── vite.config.ts                 # Vite + Tailwind v4 + /api reverse proxy
 ```
 
 ---

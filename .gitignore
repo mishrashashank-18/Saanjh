@@ -11,4 +11,7 @@ logs/
 *.log
 .tmp-*
 scratch/
+backend/.env
+backend/node_modules/
+
 
