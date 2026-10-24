@@ -135,6 +135,11 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    consent: {
+      dataProcessing: { type: Boolean, default: true },
+      version: { type: String, default: 'v1.0' },
+      acceptedAt: { type: Date, default: Date.now },
+    },
   },
   {
     timestamps: true,

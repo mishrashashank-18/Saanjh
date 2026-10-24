@@ -1,5 +1,11 @@
 const { z } = require('zod');
 const User = require('../models/User');
+const Profile = require('../models/Profile');
+const UserInterests = require('../models/UserInterests');
+const InterestAnswers = require('../models/InterestAnswers');
+const GeneratedQuestions = require('../models/GeneratedQuestions');
+const ResponseEvents = require('../models/ResponseEvents');
+const EmailOtp = require('../models/EmailOtp');
 
 function isAtLeast18(dobString) {
   if (!dobString) return true;
@@ -130,8 +136,89 @@ async function updatePhoto(req, res, next) {
   }
 }
 
+/**
+ * GET /api/users/me/data (or /me/data)
+ * Export and download user's complete data snapshot in JSON format
+ */
+async function downloadMyData(req, res, next) {
+  try {
+    const userId = req.user._id;
+
+    const [profile, interests, answers, events] = await Promise.all([
+      Profile.findOne({ userId }),
+      UserInterests.findOne({ userId }),
+      InterestAnswers.find({ userId }).sort({ category: 1, questionIndex: 1 }),
+      ResponseEvents.find({ userId }).sort({ createdAt: 1 }),
+    ]);
+
+    const dataSnapshot = {
+      exportTimestamp: new Date().toISOString(),
+      user: req.user.toJSON(),
+      profile: profile ? profile.toJSON() : null,
+      interests: interests ? interests.toJSON() : null,
+      questionAnswers: answers.map((a) => a.toJSON()),
+      responseEvents: events.map((e) => ({
+        stage: e.stage,
+        field: e.field,
+        value: e.value,
+        previousValue: e.previousValue,
+        source: e.source,
+        createdAt: e.createdAt,
+      })),
+    };
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="saanjh_user_data_${userId}.json"`);
+    return res.status(200).json(dataSnapshot);
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * DELETE /api/users/me (or /me)
+ * Permanently deletes user account and all related records across all collections
+ */
+async function deleteMyAccount(req, res, next) {
+  try {
+    const userId = req.user._id;
+    const email = req.user.email;
+
+    await Promise.all([
+      User.deleteOne({ _id: userId }),
+      Profile.deleteMany({ userId }),
+      UserInterests.deleteMany({ userId }),
+      InterestAnswers.deleteMany({ userId }),
+      GeneratedQuestions.deleteMany({ userId }),
+      ResponseEvents.deleteMany({ userId }),
+      EmailOtp.deleteMany({ email }),
+    ]);
+
+    // Clear auth cookies
+    res.clearCookie('saanjh_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    });
+    res.clearCookie('saanjh_refresh_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Your account and all associated personal data have been permanently removed.',
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   getMe,
   updateMe,
   updatePhoto,
+  downloadMyData,
+  deleteMyAccount,
 };

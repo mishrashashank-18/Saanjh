@@ -98,9 +98,17 @@ export interface UserInterestsData {
   skip?: boolean;
 }
 
+export interface QuestionOption {
+  label: string;
+  value: string;
+}
+
 export interface QuestionItem {
+  questionId?: string;
+  questionIndex?: number;
+  dimension?: string;
   text: string;
-  options: string[];
+  options: (string | QuestionOption)[];
   skippable?: boolean;
   isSensitive?: boolean;
 }
@@ -109,15 +117,16 @@ export interface CategoryQuestionData {
   category: string;
   categoryLabel: string;
   questions: QuestionItem[];
+  source?: string;
+  model?: string;
+  promptVersion?: string;
+  answers?: any[];
   answer?: {
     q1?: string;
     q2?: string;
     sharePreference?: string;
   } | null;
-  sharedQuestion: {
-    text: string;
-    options: string[];
-  };
+  sharedQuestion?: QuestionItem;
 }
 
 // API Base URL
@@ -314,7 +323,20 @@ export const api = {
       return request('/api/onboarding/questions', { method: 'GET' });
     },
 
-    saveAnswer(data: { category: string; q1: string; q2: string; sharePreference: string }): Promise<{ success: boolean; message: string; completedAll: boolean; onboardingStep: User['onboardingStep'] }> {
+    saveAnswer(data: {
+      category: string;
+      answers?: {
+        questionIndex: number;
+        questionId: string;
+        dimension: string;
+        selectedValue: string;
+        skipped?: boolean;
+      }[];
+      q1?: string;
+      q2?: string;
+      sharePreference?: string;
+      skipped?: boolean;
+    }): Promise<{ success: boolean; message: string; completedAll: boolean; onboardingStep: User['onboardingStep'] }> {
       return request('/api/onboarding/answers', {
         method: 'POST',
         body: JSON.stringify(data),

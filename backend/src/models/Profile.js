@@ -71,6 +71,14 @@ const profileSchema = new mongoose.Schema(
       maxlength: 500,
       default: '',
     },
+    completedAt: {
+      type: Date,
+      default: null,
+    },
+    responseVersion: {
+      type: String,
+      default: 'v1.0',
+    },
   },
   {
     timestamps: true,

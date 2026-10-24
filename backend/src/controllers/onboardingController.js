@@ -2,11 +2,16 @@ const { z } = require('zod');
 const Profile = require('../models/Profile');
 const InterestCatalog = require('../models/InterestCatalog');
 const UserInterests = require('../models/UserInterests');
-const InterestQuestions = require('../models/InterestQuestions');
 const InterestAnswers = require('../models/InterestAnswers');
+const GeneratedQuestions = require('../models/GeneratedQuestions');
+const QuestionBank = require('../models/QuestionBank');
 const User = require('../models/User');
-const { catalogData, defaultQuestionsData, generateSlug } = require('../data/seedData');
-const { generateCategoryQuestions } = require('../services/geminiService');
+const { catalogData, generateSlug } = require('../data/seedData');
+const {
+  generateCategoryQuestions,
+  getSeededCategoryQuestions,
+} = require('../services/geminiService');
+const { logResponseEvent } = require('../services/eventService');
 
 // 1. Zod Validation Schemas
 const profileSchema = z.object({
@@ -51,72 +56,34 @@ const profileSchema = z.object({
   isFinalSubmit: z.boolean().optional(),
 });
 
+// No limits: categories 1..13, interests any number, top3 optional 0..3
 const userInterestsSchema = z.object({
   categories: z.array(z.string()).default([]),
   interests: z.array(z.string()).default([]),
-  top3: z.array(z.string()).default([]),
+  top3: z.array(z.string()).max(3).default([]),
   skip: z.boolean().optional(),
+});
+
+const answerItemSchema = z.object({
+  questionIndex: z.number().min(0).max(4),
+  questionId: z.string(),
+  dimension: z.string(),
+  selectedValue: z.string().default(''),
+  skipped: z.boolean().optional().default(false),
 });
 
 const answerSchema = z.object({
   category: z.string({ required_error: 'Category is required' }),
-  q1: z.string().default(''),
-  q2: z.string().default(''),
+  answers: z.array(answerItemSchema).optional(),
+  // Legacy single fields support (can be string or option object { label, value })
+  q1: z.any().optional().default(''),
+  q2: z.any().optional().default(''),
   sharePreference: z
     .enum(['must-have', 'nice-to-have', 'doesnt-matter', ''])
+    .optional()
     .default(''),
+  skipped: z.boolean().optional().default(false),
 });
-
-// Helper: Calculate Top Categories for User
-async function computeTopCategories(userId) {
-  const userInterests = await UserInterests.findOne({ userId });
-  if (!userInterests || !userInterests.categories || userInterests.categories.length === 0) {
-    // Default fallback to first 3 categories
-    return ['music', 'movies_tv', 'books_learning'];
-  }
-
-  const chosenCategories = new Set();
-
-  // 1. First prioritize categories from the ranked top-3 interests
-  if (userInterests.top3 && userInterests.top3.length > 0) {
-    for (const slug of userInterests.top3) {
-      const cat = slug.split('.')[0];
-      if (cat && catalogData[cat]) {
-        chosenCategories.add(cat);
-      }
-    }
-  }
-
-  // 2. If fewer than 3, fill up with categories that have the most selected interests
-  if (chosenCategories.size < 3) {
-    const categoryCounts = {};
-    for (const slug of userInterests.interests || []) {
-      const cat = slug.split('.')[0];
-      if (cat) {
-        categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
-      }
-    }
-
-    const sortedByCount = Object.keys(categoryCounts).sort(
-      (a, b) => categoryCounts[b] - categoryCounts[a]
-    );
-
-    for (const cat of sortedByCount) {
-      if (chosenCategories.size >= 3) break;
-      chosenCategories.add(cat);
-    }
-  }
-
-  // 3. If still fewer than 3, fill from user's chosen categories
-  if (chosenCategories.size < 3) {
-    for (const cat of userInterests.categories) {
-      if (chosenCategories.size >= 3) break;
-      chosenCategories.add(cat);
-    }
-  }
-
-  return Array.from(chosenCategories).slice(0, 3);
-}
 
 // ----------------- CONTROLLER METHODS -----------------
 
@@ -140,6 +107,7 @@ async function getProfile(req, res, next) {
         dateOfBirth: req.user.dateOfBirth,
         genderIdentity: req.user.genderIdentity,
         mobileNumber: req.user.mobileNumber,
+        consent: req.user.consent,
       },
     });
   } catch (error) {
@@ -169,13 +137,35 @@ async function saveProfile(req, res, next) {
       notes: validatedData.notes,
     };
 
+    if (validatedData.isFinalSubmit) {
+      updateFields.completedAt = new Date();
+    }
+
+    const previousProfile = await Profile.findOne({ userId: req.user._id });
+
     const profile = await Profile.findOneAndUpdate(
       { userId: req.user._id },
       { $set: updateFields },
       { new: true, upsert: true }
     );
 
-    // If final submission of the 4 steps, advance onboardingStep to 'interests'
+    // Record response events
+    await logResponseEvent({
+      userId: req.user._id,
+      stage: 'onboarding_profile',
+      field: 'partnerPriorities',
+      value: validatedData.partnerPriorities,
+      previousValue: previousProfile?.partnerPriorities,
+    });
+    await logResponseEvent({
+      userId: req.user._id,
+      stage: 'onboarding_profile',
+      field: 'relationshipGoal',
+      value: validatedData.relationshipGoal,
+      previousValue: previousProfile?.relationshipGoal,
+    });
+
+    // Advance onboardingStep to 'interests' if final submit
     if (validatedData.isFinalSubmit) {
       if (req.user.onboardingStep === 'profile' || req.user.onboardingStep === 'verify') {
         req.user.onboardingStep = 'interests';
@@ -199,11 +189,9 @@ async function saveProfile(req, res, next) {
  */
 async function getCatalog(req, res, next) {
   try {
-    // Attempt to read from MongoDB collection first
     const catalogDocs = await InterestCatalog.find().sort({ category: 1, label: 1 });
 
     if (catalogDocs && catalogDocs.length > 0) {
-      // Group by category
       const formattedCatalog = {};
       for (const item of catalogDocs) {
         if (!formattedCatalog[item.category]) {
@@ -224,7 +212,7 @@ async function getCatalog(req, res, next) {
       });
     }
 
-    // Fallback directly to catalogData with generated slugs
+    // Fallback directly to catalogData
     const formattedFallback = {};
     for (const [catKey, catInfo] of Object.entries(catalogData)) {
       formattedFallback[catKey] = {
@@ -265,14 +253,14 @@ async function getUserInterests(req, res, next) {
 
 /**
  * POST /api/onboarding/interests
+ * Supports 1 to 13 categories, unlimited interests, optional top 3
  */
 async function saveUserInterests(req, res, next) {
   try {
     const { categories, interests, top3, skip } = userInterestsSchema.parse(req.body);
 
-    // If skip was clicked, allow skip but don't advance to done
+    // If skip was clicked, allow skip to questions
     if (skip) {
-      // User can skip for now, but stays on this step or moves forward
       if (req.user.onboardingStep === 'interests') {
         req.user.onboardingStep = 'interest_questions';
         await req.user.save();
@@ -284,35 +272,32 @@ async function saveUserInterests(req, res, next) {
       });
     }
 
-    // Validation rules:
-    // Categories: at least 3
-    if (categories.length < 3) {
+    // Validation: at least 1 category and 1 interest
+    if (!categories || categories.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Please choose at least 3 categories that interest you.',
+        message: 'Please pick at least 1 category that inspires you.',
       });
     }
 
-    // Interests: at least 5 in total, max 15
-    if (interests.length < 5) {
+    if (!interests || interests.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Please select at least 5 interests in total.',
-      });
-    }
-    if (interests.length > 15) {
-      return res.status(400).json({
-        success: false,
-        message: 'You can select up to 15 interests maximum.',
+        message: 'Please pick at least 1 interest in your chosen categories.',
       });
     }
 
-    // Top 3: exactly 3
-    if (top3.length !== 3) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please select and order exactly 3 top interests.',
-      });
+    // Detect removed categories if user is editing later in Settings
+    const previous = await UserInterests.findOne({ userId: req.user._id });
+    if (previous && previous.categories && previous.categories.length > 0) {
+      const removedCategories = previous.categories.filter((c) => !categories.includes(c));
+      if (removedCategories.length > 0) {
+        // Archive answers for removed categories (never delete)
+        await InterestAnswers.updateMany(
+          { userId: req.user._id, category: { $in: removedCategories } },
+          { $set: { isArchived: true } }
+        );
+      }
     }
 
     const saved = await UserInterests.findOneAndUpdate(
@@ -321,11 +306,37 @@ async function saveUserInterests(req, res, next) {
         $set: {
           categories,
           interests,
-          top3,
+          top3: top3 || [],
+          completedAt: new Date(),
         },
       },
       { new: true, upsert: true }
     );
+
+    // Record response events
+    await logResponseEvent({
+      userId: req.user._id,
+      stage: 'onboarding_interests',
+      field: 'categories',
+      value: categories,
+      previousValue: previous?.categories || [],
+    });
+    await logResponseEvent({
+      userId: req.user._id,
+      stage: 'onboarding_interests',
+      field: 'interests',
+      value: interests,
+      previousValue: previous?.interests || [],
+    });
+    if (top3 && top3.length > 0) {
+      await logResponseEvent({
+        userId: req.user._id,
+        stage: 'onboarding_interests',
+        field: 'top3',
+        value: top3,
+        previousValue: previous?.top3 || [],
+      });
+    }
 
     if (req.user.onboardingStep === 'interests') {
       req.user.onboardingStep = 'interest_questions';
@@ -345,72 +356,91 @@ async function saveUserInterests(req, res, next) {
 
 /**
  * GET /api/onboarding/questions
- * Fetches questions for the user's top 3 categories (Gemini generated or seeded, cached in MongoDB)
+ * Fetches 5 questions for EVERY category the user selected (1 to 13),
+ * generated by Gemini with seeded fallback.
  */
 async function getQuestions(req, res, next) {
   try {
-    const topCategories = await computeTopCategories(req.user._id);
+    const userInterests = await UserInterests.findOne({ userId: req.user._id });
+    const selectedCategories = (userInterests && userInterests.categories && userInterests.categories.length > 0)
+      ? userInterests.categories
+      : ['music']; // fallback default
 
-    // Fetch existing answers for these categories
+    // Map user's picked interests by category
+    const userInterestsMap = {};
+    for (const slug of userInterests?.interests || []) {
+      const [catKey, ...rest] = slug.split('.');
+      if (catKey) {
+        if (!userInterestsMap[catKey]) userInterestsMap[catKey] = [];
+        const label = rest.join(' ').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+        userInterestsMap[catKey].push(label);
+      }
+    }
+
+    // Fetch existing active answers
     const existingAnswers = await InterestAnswers.find({
       userId: req.user._id,
-      category: { $in: topCategories },
+      category: { $in: selectedCategories },
+      isArchived: false,
     });
-    const answersMap = {};
-    for (const a of existingAnswers) {
-      answersMap[a.category] = a.toJSON();
+
+    const answersByCategory = {};
+    for (const ans of existingAnswers) {
+      if (!answersByCategory[ans.category]) answersByCategory[ans.category] = [];
+      answersByCategory[ans.category].push(ans.toJSON());
     }
 
-    const categoriesQuestions = [];
+    // Generate questions for all selected categories in parallel
+    const categoriesQuestions = await Promise.all(
+      selectedCategories.map(async (catKey) => {
+        const catInfo = catalogData[catKey] || { label: catKey.replace(/_/g, ' ') };
+        const specificInterests = userInterestsMap[catKey] || [];
 
-    for (const catKey of topCategories) {
-      const catInfo = catalogData[catKey] || { label: catKey };
+        const generatedResult = await generateCategoryQuestions({
+          userId: req.user._id,
+          categoryKey: catKey,
+          categoryLabel: catInfo.label,
+          specificInterests,
+        });
 
-      // 1. Check if questions are already cached in MongoDB
-      let cached = await InterestQuestions.findOne({ category: catKey });
+        const catAnswers = answersByCategory[catKey] || [];
 
-      if (!cached || !cached.questions || cached.questions.length !== 2) {
-        // 2. Try Gemini generation with timeout & schema validation
-        const seededQuestions = defaultQuestionsData[catKey] || [];
-        const geminiQuestions = await generateCategoryQuestions(
-          catKey,
-          catInfo.label,
-          seededQuestions
-        );
+        // Legacy answer summary for backward compatibility
+        const q1Ans = catAnswers.find((a) => a.questionIndex === 0)?.selectedValue || '';
+        const q2Ans = catAnswers.find((a) => a.questionIndex === 1)?.selectedValue || '';
+        const q5Ans = catAnswers.find((a) => a.questionIndex === 4);
+        const sharePref = q5Ans?.sharePreference || q5Ans?.selectedValue || '';
 
-        const questionsToSave = geminiQuestions || seededQuestions;
-        const source = geminiQuestions ? 'gemini' : 'seed';
-
-        // Cache in MongoDB
-        cached = await InterestQuestions.findOneAndUpdate(
-          { category: catKey },
-          {
-            $set: {
-              category: catKey,
-              source,
-              questions: questionsToSave,
-              updatedAt: new Date(),
-            },
+        return {
+          category: catKey,
+          categoryLabel: catInfo.label,
+          questions: generatedResult.questions, // exactly 5 questions
+          source: generatedResult.source,
+          model: generatedResult.model,
+          promptVersion: generatedResult.promptVersion,
+          answers: catAnswers,
+          // Legacy fields for backward compat
+          answer: {
+            q1: q1Ans,
+            q2: q2Ans,
+            sharePreference: sharePref,
           },
-          { upsert: true, new: true }
-        );
-      }
-
-      categoriesQuestions.push({
-        category: catKey,
-        categoryLabel: catInfo.label,
-        questions: cached.questions,
-        answer: answersMap[catKey] || null,
-        sharedQuestion: {
-          text: 'How much do you want a partner to share this interest?',
-          options: ['Must have', 'Nice to have', "Doesn't matter"],
-        },
-      });
-    }
+          sharedQuestion: generatedResult.questions[4] || {
+            text: 'How much do you want a partner to share this interest?',
+            options: [
+              { label: 'Must have', value: 'must_have' },
+              { label: 'Nice to have', value: 'nice_to_have' },
+              { label: "Doesn't matter", value: 'doesnt_matter' },
+            ],
+          },
+        };
+      })
+    );
 
     return res.status(200).json({
       success: true,
-      topCategories,
+      selectedCategories,
+      totalCategories: selectedCategories.length,
       categoriesQuestions,
     });
   } catch (error) {
@@ -420,34 +450,122 @@ async function getQuestions(req, res, next) {
 
 /**
  * POST /api/onboarding/answers
- * Saves answer for a category
+ * Saves 5 questions per category with ML snapshots and tags
  */
 async function saveAnswer(req, res, next) {
   try {
-    const { category, q1, q2, sharePreference } = answerSchema.parse(req.body);
+    const parsed = answerSchema.parse(req.body);
+    const { category, answers, q1, q2, sharePreference, skipped } = parsed;
 
-    const saved = await InterestAnswers.findOneAndUpdate(
-      { userId: req.user._id, category },
-      {
-        $set: {
-          q1,
-          q2,
-          sharePreference,
-          answeredAt: new Date(),
-        },
-      },
-      { new: true, upsert: true }
-    );
+    // Get user interests context for snapshot
+    const userInterests = await UserInterests.findOne({ userId: req.user._id });
+    const interestsContext = (userInterests?.interests || [])
+      .filter((s) => s.startsWith(`${category}.`));
 
-    // Check if user has answered all top 3 categories
-    const topCategories = await computeTopCategories(req.user._id);
-    const answeredCount = await InterestAnswers.countDocuments({
+    // Get generated questions snapshot from cache or QuestionBank
+    const cachedGen = await GeneratedQuestions.findOne({
       userId: req.user._id,
-      category: { $in: topCategories },
+      category,
+    });
+    const questionsSnapshot = cachedGen?.questions || getSeededCategoryQuestions(category);
+
+    const savedAnswers = [];
+
+    if (answers && Array.isArray(answers) && answers.length > 0) {
+      // Modern 5-question answer format
+      for (const ans of answers) {
+        const qSnap = questionsSnapshot[ans.questionIndex] || questionsSnapshot[0];
+        const isQ5 = ans.questionIndex === 4;
+        const normalizedSharePref = isQ5
+          ? (ans.selectedValue === 'must_have' ? 'must-have' : ans.selectedValue === 'nice_to_have' ? 'nice-to-have' : ans.selectedValue === 'doesnt_matter' ? 'doesnt-matter' : ans.selectedValue)
+          : '';
+
+        const doc = await InterestAnswers.findOneAndUpdate(
+          { userId: req.user._id, category, questionIndex: ans.questionIndex },
+          {
+            $set: {
+              userId: req.user._id,
+              category,
+              questionIndex: ans.questionIndex,
+              questionId: ans.questionId || qSnap.questionId || `${category}_q${ans.questionIndex + 1}`,
+              dimension: ans.dimension || qSnap.dimension,
+              questionText: qSnap.text,
+              options: qSnap.options,
+              selectedValue: ans.selectedValue || (ans.skipped ? 'skipped' : ''),
+              interestsContext,
+              generatedBy: cachedGen?.source || 'seed',
+              model: cachedGen?.model || 'seed',
+              promptVersion: cachedGen?.promptVersion || 'v1.0',
+              sharePreference: normalizedSharePref,
+              skipped: Boolean(ans.skipped || skipped),
+              isArchived: false,
+              answeredAt: new Date(),
+            },
+          },
+          { new: true, upsert: true }
+        );
+
+        savedAnswers.push(doc);
+
+        await logResponseEvent({
+          userId: req.user._id,
+          stage: 'onboarding_questions',
+          field: `${category}:${ans.questionIndex}`,
+          value: ans.selectedValue || 'skipped',
+          source: ans.skipped ? 'skip' : 'user_input',
+        });
+      }
+    } else {
+      // Legacy format fallback: save q1, q2, sharePreference across question indexes 0, 1, 4
+      const rawQ1 = typeof q1 === 'object' && q1 !== null ? (q1.value || q1.label || '') : String(q1 || '');
+      const rawQ2 = typeof q2 === 'object' && q2 !== null ? (q2.value || q2.label || '') : String(q2 || '');
+      const legacyItems = [
+        { idx: 0, val: rawQ1 || (skipped ? 'skipped' : '') },
+        { idx: 1, val: rawQ2 || (skipped ? 'skipped' : '') },
+        { idx: 4, val: sharePreference || (skipped ? 'skipped' : '') },
+      ];
+
+      for (const item of legacyItems) {
+        const qSnap = questionsSnapshot[item.idx] || questionsSnapshot[0];
+        const isQ5 = item.idx === 4;
+        const doc = await InterestAnswers.findOneAndUpdate(
+          { userId: req.user._id, category, questionIndex: item.idx },
+          {
+            $set: {
+              userId: req.user._id,
+              category,
+              questionIndex: item.idx,
+              questionId: qSnap.questionId || `${category}_q${item.idx + 1}`,
+              dimension: qSnap.dimension,
+              questionText: qSnap.text,
+              options: qSnap.options,
+              selectedValue: item.val,
+              interestsContext,
+              generatedBy: cachedGen?.source || 'seed',
+              model: cachedGen?.model || 'seed',
+              promptVersion: cachedGen?.promptVersion || 'v1.0',
+              sharePreference: isQ5 ? sharePreference : '',
+              skipped: Boolean(skipped),
+              isArchived: false,
+              answeredAt: new Date(),
+            },
+          },
+          { new: true, upsert: true }
+        );
+        savedAnswers.push(doc);
+      }
+    }
+
+    // Check if user has answered or skipped all their selected categories
+    const allSelectedCategories = userInterests?.categories || [category];
+    const distinctCategoriesAnswered = await InterestAnswers.distinct('category', {
+      userId: req.user._id,
+      category: { $in: allSelectedCategories },
+      isArchived: false,
     });
 
     let completedAll = false;
-    if (answeredCount >= topCategories.length) {
+    if (distinctCategoriesAnswered.length >= allSelectedCategories.length) {
       completedAll = true;
       req.user.onboardingStep = 'done';
       req.user.profileCompleted = true;
@@ -457,7 +575,7 @@ async function saveAnswer(req, res, next) {
     return res.status(200).json({
       success: true,
       message: 'Answer saved successfully.',
-      answer: saved.toJSON(),
+      answers: savedAnswers.map((a) => a.toJSON()),
       completedAll,
       onboardingStep: req.user.onboardingStep,
     });

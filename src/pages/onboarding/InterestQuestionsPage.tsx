@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { api, CategoryQuestionData } from '../../services/api';
+import { api, CategoryQuestionData, QuestionItem } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 interface InterestQuestionsPageProps {
@@ -15,26 +15,45 @@ export default function InterestQuestionsPage({ onNavigate }: InterestQuestionsP
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Per-category answers state: map of category -> { q1, q2, sharePreference }
-  const [answers, setAnswers] = useState<Record<string, { q1: string; q2: string; sharePreference: string }>>({});
+  // Map of category -> { [questionIndex: number]: selectedValueString }
+  const [answers, setAnswers] = useState<Record<string, Record<number, string>>>({});
 
   useEffect(() => {
     async function loadQuestions() {
       try {
         const res = await api.onboarding.getQuestions();
-        if (res.categoriesQuestions) {
+        if (res.categoriesQuestions && res.categoriesQuestions.length > 0) {
           setCategoriesQuestions(res.categoriesQuestions);
 
           // Populate existing answers if any
-          const initialAnswers: Record<string, { q1: string; q2: string; sharePreference: string }> = {};
-          res.categoriesQuestions.forEach((cq) => {
-            initialAnswers[cq.category] = {
-              q1: cq.answer?.q1 || '',
-              q2: cq.answer?.q2 || '',
-              sharePreference: cq.answer?.sharePreference || '',
-            };
+          const initialAnswers: Record<string, Record<number, string>> = {};
+          let firstUnansweredIdx = 0;
+          let foundUnanswered = false;
+
+          res.categoriesQuestions.forEach((cq, catIdx) => {
+            initialAnswers[cq.category] = {};
+            if (cq.answers && cq.answers.length > 0) {
+              cq.answers.forEach((ans: any) => {
+                if (ans.questionIndex !== undefined) {
+                  initialAnswers[cq.category][ans.questionIndex] = ans.selectedValue || ans.sharePreference || '';
+                }
+              });
+            } else if (cq.answer) {
+              if (cq.answer.q1) initialAnswers[cq.category][0] = cq.answer.q1;
+              if (cq.answer.q2) initialAnswers[cq.category][1] = cq.answer.q2;
+              if (cq.answer.sharePreference) initialAnswers[cq.category][4] = cq.answer.sharePreference;
+            }
+
+            // Check if this category has answers
+            const ansCount = Object.keys(initialAnswers[cq.category]).length;
+            if (!foundUnanswered && ansCount < 4) {
+              firstUnansweredIdx = catIdx;
+              foundUnanswered = true;
+            }
           });
+
           setAnswers(initialAnswers);
+          setCurrentCatIndex(firstUnansweredIdx);
         }
       } catch (err: any) {
         setError(err.message || 'Could not load your questions.');
@@ -46,17 +65,27 @@ export default function InterestQuestionsPage({ onNavigate }: InterestQuestionsP
     loadQuestions();
   }, []);
 
-  const currentCategoryData = categoriesQuestions[currentCatIndex];
   const totalCategories = categoriesQuestions.length;
+  const currentCategoryData = categoriesQuestions[currentCatIndex];
 
-  function handleSelectAnswer(questionKey: 'q1' | 'q2' | 'sharePreference', value: string) {
+  function getOptionLabel(opt: any): string {
+    if (typeof opt === 'object' && opt !== null) return opt.label;
+    return String(opt);
+  }
+
+  function getOptionValue(opt: any): string {
+    if (typeof opt === 'object' && opt !== null) return opt.value;
+    return String(opt);
+  }
+
+  function handleSelectAnswer(questionIndex: number, value: string) {
     if (!currentCategoryData) return;
     const cat = currentCategoryData.category;
     setAnswers((prev) => ({
       ...prev,
       [cat]: {
-        ...(prev[cat] || { q1: '', q2: '', sharePreference: '' }),
-        [questionKey]: value,
+        ...(prev[cat] || {}),
+        [questionIndex]: value,
       },
     }));
     setError(null);
@@ -65,42 +94,48 @@ export default function InterestQuestionsPage({ onNavigate }: InterestQuestionsP
   async function handleNext() {
     if (!currentCategoryData) return;
     const cat = currentCategoryData.category;
-    const currentAns = answers[cat] || { q1: '', q2: '', sharePreference: '' };
+    const catAns = answers[cat] || {};
+    const questions = currentCategoryData.questions || [];
 
-    // Validate that questions are answered unless skippable
-    const q1 = currentCategoryData.questions[0];
-    const q2 = currentCategoryData.questions[1];
-
-    if (!q1?.skippable && !currentAns.q1) {
-      setError('Please answer the first question (or tap an option).');
-      return;
-    }
-    if (!q2?.skippable && !currentAns.q2) {
-      setError('Please answer the second question.');
-      return;
-    }
-    if (!currentAns.sharePreference) {
-      setError('Please answer how much you want a partner to share this interest.');
-      return;
+    // Validate required questions (Q1 to Q5)
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      if (!q.skippable && (!catAns[i] || catAns[i].trim() === '')) {
+        setError(`Please select an answer for question ${i + 1}.`);
+        return;
+      }
     }
 
     setIsSaving(true);
     setError(null);
 
     try {
-      // Save answer for this category
+      const payloadAnswers = questions.map((q: QuestionItem, idx: number) => ({
+        questionIndex: idx,
+        questionId: q.questionId || `${cat}_q${idx + 1}`,
+        dimension: q.dimension || (idx === 4 ? 'shared_activity' : 'intensity'),
+        selectedValue: catAns[idx] || (q.skippable ? 'prefer_not_to_say' : ''),
+        skipped: false,
+      }));
+
+      const q5Value = catAns[4] || '';
+      const normalizedSharePref =
+        q5Value === 'must_have' || q5Value === 'must-have'
+          ? 'must-have'
+          : q5Value === 'nice_to_have' || q5Value === 'nice-to-have'
+          ? 'nice-to-have'
+          : 'doesnt-matter';
+
       await api.onboarding.saveAnswer({
         category: cat,
-        q1: currentAns.q1,
-        q2: currentAns.q2,
-        sharePreference: currentAns.sharePreference,
+        answers: payloadAnswers,
+        sharePreference: normalizedSharePref,
+        skipped: false,
       });
 
-      // If more categories remain, advance to next category screen
       if (currentCatIndex < totalCategories - 1) {
         setCurrentCatIndex((prev) => prev + 1);
       } else {
-        // Completed all categories!
         await refreshUser();
         onNavigate('/dashboard');
       }
@@ -109,6 +144,48 @@ export default function InterestQuestionsPage({ onNavigate }: InterestQuestionsP
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function handleSkipCategory() {
+    if (!currentCategoryData) return;
+    const cat = currentCategoryData.category;
+    const questions = currentCategoryData.questions || [];
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const payloadAnswers = questions.map((q: QuestionItem, idx: number) => ({
+        questionIndex: idx,
+        questionId: q.questionId || `${cat}_q${idx + 1}`,
+        dimension: q.dimension || 'intensity',
+        selectedValue: 'skipped',
+        skipped: true,
+      }));
+
+      await api.onboarding.saveAnswer({
+        category: cat,
+        answers: payloadAnswers,
+        sharePreference: '',
+        skipped: true,
+      });
+
+      if (currentCatIndex < totalCategories - 1) {
+        setCurrentCatIndex((prev) => prev + 1);
+      } else {
+        await refreshUser();
+        onNavigate('/dashboard');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Could not skip category.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleFinishLater() {
+    await refreshUser();
+    onNavigate('/dashboard');
   }
 
   function handleBack() {
@@ -120,12 +197,46 @@ export default function InterestQuestionsPage({ onNavigate }: InterestQuestionsP
     }
   }
 
+  // Friendly skeleton loading state
   if (isLoading) {
     return (
       <div className="auth-page-root">
-        <div style={{ textAlign: 'center', color: '#5d534b' }}>
-          <p>Generating thoughtful questions for your passions...</p>
-        </div>
+        <main className="auth-page-main">
+          <div className="auth-page-container signup-container" style={{ maxWidth: '640px', padding: '36px' }}>
+            <div style={{ textAlign: 'center', width: '100%' }}>
+              <div
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  background: 'var(--peach)',
+                  color: 'var(--coral)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '22px',
+                  marginBottom: '16px',
+                  animation: 'pulse 1.8s infinite ease-in-out',
+                }}
+              >
+                ✦
+              </div>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', color: 'var(--ink)', marginBottom: '8px' }}>
+                Preparing questions for you...
+              </h2>
+              <p style={{ color: '#7a7067', fontSize: '14.5px', marginBottom: '28px' }}>
+                Tailoring thoughtful prompts to your chosen passions.
+              </p>
+
+              {/* Skeleton cards */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '420px', margin: '0 auto' }}>
+                <div style={{ height: '56px', background: '#f5eee6', borderRadius: '14px', opacity: 0.8 }} />
+                <div style={{ height: '56px', background: '#f5eee6', borderRadius: '14px', opacity: 0.6 }} />
+                <div style={{ height: '56px', background: '#f5eee6', borderRadius: '14px', opacity: 0.4 }} />
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
@@ -133,7 +244,7 @@ export default function InterestQuestionsPage({ onNavigate }: InterestQuestionsP
   if (!currentCategoryData) {
     return (
       <div className="auth-page-root">
-        <div style={{ textAlign: 'center', color: '#5d534b' }}>
+        <div style={{ textAlign: 'center', color: '#5d534b', padding: '40px' }}>
           <p>No questions found. Please make sure you have selected interests.</p>
           <button
             type="button"
@@ -148,9 +259,9 @@ export default function InterestQuestionsPage({ onNavigate }: InterestQuestionsP
     );
   }
 
-  const currentAns = answers[currentCategoryData.category] || { q1: '', q2: '', sharePreference: '' };
-  const q1 = currentCategoryData.questions[0];
-  const q2 = currentCategoryData.questions[1];
+  const cat = currentCategoryData.category;
+  const currentCatAnswers = answers[cat] || {};
+  const questions = currentCategoryData.questions || [];
 
   return (
     <div className="auth-page-root">
@@ -177,7 +288,7 @@ export default function InterestQuestionsPage({ onNavigate }: InterestQuestionsP
                   <span className="auth-step-num">✓</span>
                   <div>
                     <strong>Interests selected</strong>
-                    <p>Top categories and ranked passions.</p>
+                    <p>Chosen categories and passions.</p>
                   </div>
                 </div>
                 <div className="auth-step-item">
@@ -200,7 +311,7 @@ export default function InterestQuestionsPage({ onNavigate }: InterestQuestionsP
 
           {/* Right Column: Questions Form Card */}
           <section className="auth-page-form-wrap">
-            <div className="auth-form-container" style={{ maxWidth: '520px' }}>
+            <div className="auth-form-container" style={{ maxWidth: '540px' }}>
               {/* Header with Progress Bar */}
               <div className="auth-form-header">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
@@ -236,8 +347,11 @@ export default function InterestQuestionsPage({ onNavigate }: InterestQuestionsP
                 <h1 style={{ fontSize: '26px', marginBottom: '4px' }}>
                   {currentCategoryData.categoryLabel}
                 </h1>
-                <p style={{ fontSize: '14.5px' }}>
+                <p style={{ fontSize: '14.5px', marginBottom: '4px' }}>
                   Single-tap your preferred answers. Take your time.
+                </p>
+                <p style={{ fontSize: '12px', color: '#8c827a' }}>
+                  Your answers help us suggest better matches.
                 </p>
               </div>
 
@@ -248,123 +362,56 @@ export default function InterestQuestionsPage({ onNavigate }: InterestQuestionsP
                 </div>
               )}
 
+              {/* 5 Single-Choice Questions */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
-                {/* QUESTION 1 */}
-                {q1 && (
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--ink)' }}>
-                        1. {q1.text}
-                      </label>
-                      {q1.skippable && (
-                        <span style={{ fontSize: '11.5px', color: '#888' }}>(Optional)</span>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                      {q1.options.map((opt) => {
-                        const isSelected = currentAns.q1 === opt;
-                        return (
-                          <button
-                            key={opt}
-                            type="button"
-                            onClick={() => handleSelectAnswer('q1', opt)}
-                            style={{
-                              padding: '9px 16px',
-                              borderRadius: '999px',
-                              fontSize: '13.5px',
-                              fontWeight: '600',
-                              border: isSelected ? '1.5px solid var(--coral)' : '1px solid #ded8d0',
-                              background: isSelected ? 'var(--peach)' : '#ffffff',
-                              color: isSelected ? 'var(--coral-dark)' : 'var(--ink)',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease',
-                            }}
-                          >
-                            {isSelected ? '✓ ' : ''}{opt}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                {questions.map((q: QuestionItem, qIdx: number) => {
+                  const selectedVal = currentCatAnswers[qIdx] || '';
+                  return (
+                    <div key={q.questionId || qIdx}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--ink)' }}>
+                          {qIdx + 1}. {q.text}
+                        </label>
+                        {q.skippable && (
+                          <span style={{ fontSize: '11.5px', color: '#888' }}>(Optional)</span>
+                        )}
+                      </div>
 
-                {/* QUESTION 2 */}
-                {q2 && (
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--ink)' }}>
-                        2. {q2.text}
-                      </label>
-                      {q2.skippable && (
-                        <span style={{ fontSize: '11.5px', color: '#888' }}>(Optional)</span>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                      {q2.options.map((opt) => {
-                        const isSelected = currentAns.q2 === opt;
-                        return (
-                          <button
-                            key={opt}
-                            type="button"
-                            onClick={() => handleSelectAnswer('q2', opt)}
-                            style={{
-                              padding: '9px 16px',
-                              borderRadius: '999px',
-                              fontSize: '13.5px',
-                              fontWeight: '600',
-                              border: isSelected ? '1.5px solid var(--coral)' : '1px solid #ded8d0',
-                              background: isSelected ? 'var(--peach)' : '#ffffff',
-                              color: isSelected ? 'var(--coral-dark)' : 'var(--ink)',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease',
-                            }}
-                          >
-                            {isSelected ? '✓ ' : ''}{opt}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {q.options.map((opt: any) => {
+                          const label = getOptionLabel(opt);
+                          const value = getOptionValue(opt);
+                          const isSelected = selectedVal === value;
 
-                {/* SHARED QUESTION */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: 'var(--ink)', marginBottom: '8px' }}>
-                    3. How much do you want a partner to share this interest?
-                  </label>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {[
-                      { id: 'must-have', label: 'Must have' },
-                      { id: 'nice-to-have', label: 'Nice to have' },
-                      { id: 'doesnt-matter', label: "Doesn't matter" },
-                    ].map((opt) => {
-                      const isSelected = currentAns.sharePreference === opt.id;
-                      return (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          onClick={() => handleSelectAnswer('sharePreference', opt.id)}
-                          style={{
-                            padding: '9px 16px',
-                            borderRadius: '999px',
-                            fontSize: '13.5px',
-                            fontWeight: '600',
-                            border: isSelected ? '1.5px solid var(--coral)' : '1px solid #ded8d0',
-                            background: isSelected ? 'var(--peach)' : '#ffffff',
-                            color: isSelected ? 'var(--coral-dark)' : 'var(--ink)',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          {isSelected ? '✓ ' : ''}{opt.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                          return (
+                            <button
+                              key={value}
+                              type="button"
+                              onClick={() => handleSelectAnswer(qIdx, value)}
+                              style={{
+                                padding: '9px 16px',
+                                borderRadius: '999px',
+                                fontSize: '13.5px',
+                                fontWeight: '600',
+                                border: isSelected ? '1.5px solid var(--coral)' : '1px solid #ded8d0',
+                                background: isSelected ? 'var(--peach)' : '#ffffff',
+                                color: isSelected ? 'var(--coral-dark)' : 'var(--ink)',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              {isSelected ? '✓ ' : ''}{label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
-              {/* Navigation Action Buttons */}
-              <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
+              {/* Primary Action Buttons: Back, Next */}
+              <div style={{ display: 'flex', gap: '12px', marginTop: '28px' }}>
                 <button
                   type="button"
                   onClick={handleBack}
@@ -394,6 +441,50 @@ export default function InterestQuestionsPage({ onNavigate }: InterestQuestionsP
                     : currentCatIndex === totalCategories - 1
                     ? 'Finish & Go to Dashboard →'
                     : 'Next Category →'}
+                </button>
+              </div>
+
+              {/* Secondary Options: Skip this category & Finish later */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginTop: '16px',
+                  paddingTop: '12px',
+                  borderTop: '1px solid #f2e8df',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={handleSkipCategory}
+                  disabled={isSaving}
+                  style={{
+                    border: 'none',
+                    background: 'none',
+                    fontSize: '13px',
+                    color: '#8a7e75',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  Skip this category
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleFinishLater}
+                  disabled={isSaving}
+                  style={{
+                    border: 'none',
+                    background: 'none',
+                    fontSize: '13px',
+                    color: '#8a7e75',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  Finish later
                 </button>
               </div>
             </div>

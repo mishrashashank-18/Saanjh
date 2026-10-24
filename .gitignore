@@ -13,5 +13,6 @@ logs/
 scratch/
 backend/.env
 backend/node_modules/
+backend/exports/
 
 

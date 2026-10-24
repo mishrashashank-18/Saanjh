@@ -21,6 +21,14 @@ const userInterestsSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    completedAt: {
+      type: Date,
+      default: null,
+    },
+    responseVersion: {
+      type: String,
+      default: 'v1.0',
+    },
   },
   {
     timestamps: true,

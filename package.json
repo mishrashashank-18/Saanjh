@@ -8,6 +8,7 @@
     "dev:all": "node scripts/start-all.js",
     "start": "node scripts/start-all.js",
     "seed": "npm --prefix backend run seed",
+    "export:training": "npm --prefix backend run export:training",
     "build": "vite build",
     "preview": "vite preview",
     "format": "oxfmt",

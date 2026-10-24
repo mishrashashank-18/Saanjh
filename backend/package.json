@@ -7,7 +7,9 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "seed": "node src/scripts/seedInterests.js",
-    "test": "node --test tests/auth.test.js tests/onboarding.test.js"
+    "seed:bank": "node src/scripts/seedQuestionBank.js",
+    "export:training": "node src/scripts/exportTrainingData.js",
+    "test": "node --test tests/auth.test.js tests/onboarding.test.js tests/gemini_and_limits.test.js"
   },
   "keywords": [
     "matchmaking",

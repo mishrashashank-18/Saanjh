@@ -8,6 +8,8 @@ const router = express.Router();
 router.use(authenticate);
 
 router.get('/me', userController.getMe);
+router.get('/me/data', userController.downloadMyData);
+router.delete('/me', userController.deleteMyAccount);
 router.patch('/me', userController.updateMe);
 router.post('/me/photo', userController.updatePhoto);
 

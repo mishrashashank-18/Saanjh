@@ -7,6 +7,8 @@ const morgan = require('morgan');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const onboardingRoutes = require('./routes/onboardingRoutes');
+const userController = require('./controllers/userController');
+const { authenticate } = require('./middleware/authMiddleware');
 const { getDBStatus } = require('./config/db');
 const { notFoundHandler, errorHandler } = require('./middleware/errorMiddleware');
 
@@ -80,6 +82,12 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/onboarding', onboardingRoutes);
+
+// Direct /me endpoints for convenience and explicit spec alignment
+app.get('/me/data', authenticate, userController.downloadMyData);
+app.delete('/me', authenticate, userController.deleteMyAccount);
+app.get('/api/me/data', authenticate, userController.downloadMyData);
+app.delete('/api/me', authenticate, userController.deleteMyAccount);
 
 // Centralized 404 handler
 app.use(notFoundHandler);

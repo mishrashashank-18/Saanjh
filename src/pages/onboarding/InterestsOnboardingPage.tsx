@@ -74,10 +74,6 @@ export default function InterestsOnboardingPage({ onNavigate }: InterestsOnboard
       setSelectedInterests(selectedInterests.filter((s) => s !== slug));
       setTop3(top3.filter((s) => s !== slug));
     } else {
-      if (selectedInterests.length >= 15) {
-        showToast('You can select up to 15 interests maximum', 'info');
-        return;
-      }
       setSelectedInterests([...selectedInterests, slug]);
     }
   }
@@ -117,10 +113,10 @@ export default function InterestsOnboardingPage({ onNavigate }: InterestsOnboard
   async function handleNext() {
     setError(null);
 
-    // Screen 1: Pick categories
+    // Screen 1: Pick categories (1 to 13, no arbitrary limit)
     if (screen === 1) {
-      if (selectedCategories.length < 3) {
-        setError('Please pick at least 3 categories to continue.');
+      if (selectedCategories.length < 1) {
+        setError('Please pick at least 1 category that inspires you.');
         return;
       }
       setActiveCategoryFilter(selectedCategories[0]);
@@ -128,23 +124,18 @@ export default function InterestsOnboardingPage({ onNavigate }: InterestsOnboard
       return;
     }
 
-    // Screen 2: Pick interests
+    // Screen 2: Pick interests (no limit, counter is N selected)
     if (screen === 2) {
-      if (selectedInterests.length < 5) {
-        setError(`Please pick at least 5 interests (currently ${selectedInterests.length} selected).`);
+      if (selectedInterests.length < 1) {
+        setError('Please pick at least 1 interest across your chosen categories.');
         return;
       }
       setScreen(3);
       return;
     }
 
-    // Screen 3: Top 3
+    // Screen 3: Optional Top 3
     if (screen === 3) {
-      if (top3.length !== 3) {
-        setError('Please select and order your top 3 interests.');
-        return;
-      }
-
       setIsSaving(true);
       try {
         await api.onboarding.saveUserInterests({
@@ -227,9 +218,9 @@ export default function InterestsOnboardingPage({ onNavigate }: InterestsOnboard
                   <div>
                     <strong style={{ color: 'var(--coral)' }}>Pick your interests</strong>
                     <p>
-                      {screen === 1 && 'Screen 1: Choose at least 3 categories'}
-                      {screen === 2 && 'Screen 2: Choose 5 to 15 specific passions'}
-                      {screen === 3 && 'Screen 3: Rank your top 3 favourites'}
+                      {screen === 1 && 'Screen 1: Choose categories that inspire you'}
+                      {screen === 2 && 'Screen 2: Pick as many as you like'}
+                      {screen === 3 && 'Screen 3: Rank your top 3 favourites (optional)'}
                     </p>
                   </div>
                 </div>
@@ -262,7 +253,7 @@ export default function InterestsOnboardingPage({ onNavigate }: InterestsOnboard
                   </span>
                   {screen === 2 && (
                     <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--coral)' }}>
-                      {selectedInterests.length} of 15 selected
+                      {selectedInterests.length} selected
                     </span>
                   )}
                   {screen === 3 && (
@@ -299,9 +290,9 @@ export default function InterestsOnboardingPage({ onNavigate }: InterestsOnboard
                   {screen === 3 && 'Which 3 matter most to you?'}
                 </h1>
                 <p style={{ fontSize: '14.5px' }}>
-                  {screen === 1 && 'Pick at least 3 categories that speak to your life and passions.'}
-                  {screen === 2 && 'Pick at least 5 (up to 15) interests across your chosen categories.'}
-                  {screen === 3 && 'Pick and order your 3 core favourites to feature on your matches.'}
+                  {screen === 1 && 'Pick any categories that speak to your life and passions.'}
+                  {screen === 2 && 'Pick as many as you like across your chosen categories.'}
+                  {screen === 3 && 'Pick and order your top favourites (optional).'}
                 </p>
               </div>
 
