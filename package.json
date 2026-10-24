@@ -5,11 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:all": "node scripts/start-all.js",
+    "start": "node scripts/start-all.js",
+    "seed": "npm --prefix backend run seed",
     "build": "vite build",
     "preview": "vite preview",
     "format": "oxfmt",
     "backend:dev": "npm --prefix backend run dev",
     "backend:start": "npm --prefix backend start",
+    "backend:seed": "npm --prefix backend run seed",
     "backend:test": "npm --prefix backend test",
     "backend:install": "npm --prefix backend install"
   },

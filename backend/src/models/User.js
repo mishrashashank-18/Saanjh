@@ -33,7 +33,7 @@ const userSchema = new mongoose.Schema(
     passwordHash: {
       type: String,
       default: null,
-      select: false, // Never return passwordHash in standard queries unless explicitly requested (+passwordHash)
+      select: false,
     },
     googleId: {
       type: String,
@@ -41,9 +41,19 @@ const userSchema = new mongoose.Schema(
       sparse: true,
       index: true,
     },
+    authProvider: {
+      type: String,
+      enum: ['local', 'google'],
+      default: 'local',
+    },
     emailVerified: {
       type: Boolean,
       default: false,
+    },
+    onboardingStep: {
+      type: String,
+      enum: ['signup', 'verify', 'google_complete', 'profile', 'interests', 'interest_questions', 'done'],
+      default: 'verify',
     },
     mobileNumber: {
       type: String,
@@ -56,7 +66,6 @@ const userSchema = new mongoose.Schema(
       validate: {
         validator: function (value) {
           if (!value) return true;
-          // Minimum age requirement: 18 years
           const cutoff = new Date();
           cutoff.setFullYear(cutoff.getFullYear() - 18);
           return value <= cutoff;
@@ -148,16 +157,14 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// Helper static method for hashing passwords
 userSchema.statics.hashPassword = async function (plainPassword) {
   const salt = await bcrypt.genSalt(12);
   return bcrypt.hash(plainPassword, salt);
 };
 
-// Instance method to check candidate password against stored hash
 userSchema.methods.comparePassword = async function (candidatePassword) {
   if (!this.passwordHash) {
-    return false; // Google-only users without a set password
+    return false;
   }
   return bcrypt.compare(candidatePassword, this.passwordHash);
 };

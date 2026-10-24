@@ -3,6 +3,13 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import ProfilePage from "./pages/ProfilePage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
+import GoogleCompletePage from "./pages/GoogleCompletePage";
+import ProfileOnboardingPage from "./pages/onboarding/ProfileOnboardingPage";
+import InterestsOnboardingPage from "./pages/onboarding/InterestsOnboardingPage";
+import InterestQuestionsPage from "./pages/onboarding/InterestQuestionsPage";
+import DashboardPage from "./pages/DashboardPage";
+import SettingsPage from "./pages/SettingsPage";
 
 const photos = {
   aarohi: "/images/aarohi-reference.png",
@@ -389,18 +396,27 @@ function ToastNotification() {
 }
 
 function MainContent() {
+  const { user, pendingEmail, isLoading } = useAuth();
+
   const [currentPath, setCurrentPath] = useState<string>(() => {
     const path = window.location.pathname.toLowerCase();
     const hash = window.location.hash.toLowerCase();
-    if (path === "/login" || hash === "#login") return "/login";
-    if (path === "/signup" || hash === "#signup") return "/signup";
+    if (path.startsWith("/login") || hash === "#login") return "/login";
+    if (path.startsWith("/signup") || hash === "#signup") return "/signup";
+    if (path.startsWith("/verify-email")) return "/verify-email";
+    if (path.startsWith("/onboarding/google-complete")) return "/onboarding/google-complete";
+    if (path.startsWith("/onboarding/profile")) return "/onboarding/profile";
+    if (path.startsWith("/onboarding/interests")) return "/onboarding/interests";
+    if (path.startsWith("/onboarding/interest-questions")) return "/onboarding/interest-questions";
+    if (path.startsWith("/dashboard")) return "/dashboard";
+    if (path.startsWith("/settings")) return "/settings";
     if (path === "/profile" || hash === "#profile") return "/profile";
     return "/";
   });
 
   const navigate = (path: string) => {
     window.history.pushState({}, "", path);
-    setCurrentPath(path);
+    setCurrentPath(path.toLowerCase());
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -408,8 +424,15 @@ function MainContent() {
     const handleLocation = () => {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
-      if (path === "/login" || hash === "#login") setCurrentPath("/login");
-      else if (path === "/signup" || hash === "#signup") setCurrentPath("/signup");
+      if (path.startsWith("/login") || hash === "#login") setCurrentPath("/login");
+      else if (path.startsWith("/signup") || hash === "#signup") setCurrentPath("/signup");
+      else if (path.startsWith("/verify-email")) setCurrentPath("/verify-email");
+      else if (path.startsWith("/onboarding/google-complete")) setCurrentPath("/onboarding/google-complete");
+      else if (path.startsWith("/onboarding/profile")) setCurrentPath("/onboarding/profile");
+      else if (path.startsWith("/onboarding/interests")) setCurrentPath("/onboarding/interests");
+      else if (path.startsWith("/onboarding/interest-questions")) setCurrentPath("/onboarding/interest-questions");
+      else if (path.startsWith("/dashboard")) setCurrentPath("/dashboard");
+      else if (path.startsWith("/settings")) setCurrentPath("/settings");
       else if (path === "/profile" || hash === "#profile") setCurrentPath("/profile");
       else setCurrentPath("/");
     };
@@ -422,12 +445,81 @@ function MainContent() {
     };
   }, []);
 
+  // Route Guards based on auth status & onboarding step
+  useEffect(() => {
+    if (isLoading) return;
+
+    // Unauthenticated user attempting to access protected onboarding or dashboard
+    const isProtected =
+      currentPath.startsWith("/onboarding/") ||
+      currentPath === "/dashboard" ||
+      currentPath === "/settings";
+
+    if (!user && isProtected) {
+      if (pendingEmail && currentPath === "/verify-email") {
+        // Allowed to stay on verify
+        return;
+      }
+      navigate("/login");
+      return;
+    }
+
+    // Authenticated user step guards
+    if (user) {
+      if (!user.emailVerified && currentPath !== "/verify-email") {
+        navigate("/verify-email");
+        return;
+      }
+
+      if (user.onboardingStep === "google_complete" && currentPath !== "/onboarding/google-complete") {
+        navigate("/onboarding/google-complete");
+        return;
+      }
+
+      // If user is on login/signup but already authenticated
+      if (currentPath === "/login" || currentPath === "/signup") {
+        if (user.onboardingStep === "profile") navigate("/onboarding/profile");
+        else if (user.onboardingStep === "interests") navigate("/onboarding/interests");
+        else if (user.onboardingStep === "interest_questions") navigate("/onboarding/interest-questions");
+        else navigate("/dashboard");
+      }
+    }
+  }, [user, isLoading, currentPath, pendingEmail]);
+
   if (currentPath === "/login") {
     return <LoginPage onNavigate={navigate} />;
   }
 
   if (currentPath === "/signup") {
     return <SignupPage onNavigate={navigate} />;
+  }
+
+  if (currentPath === "/verify-email") {
+    return <VerifyEmailPage onNavigate={navigate} />;
+  }
+
+  if (currentPath === "/onboarding/google-complete") {
+    return <GoogleCompletePage onNavigate={navigate} />;
+  }
+
+  if (currentPath === "/onboarding/profile") {
+    return <ProfileOnboardingPage onNavigate={navigate} />;
+  }
+
+  if (currentPath === "/onboarding/interests") {
+    return <InterestsOnboardingPage onNavigate={navigate} />;
+  }
+
+  if (currentPath === "/onboarding/interest-questions") {
+    return <InterestQuestionsPage onNavigate={navigate} />;
+  }
+
+  if (currentPath === "/dashboard") {
+    return <DashboardPage onNavigate={navigate} />;
+  }
+
+  if (currentPath === "/settings") {
+    return <SettingsPage onNavigate={navigate} />;
   }
 
   if (currentPath === "/profile") {

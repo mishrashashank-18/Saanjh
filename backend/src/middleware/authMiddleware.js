@@ -1,19 +1,71 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost:8443',
+  'http://localhost:8443',
+  'https://localhost:8443',
+  'http://localhost:5173',
+  'https://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:8443',
+  'https://127.0.0.1:8443',
+  'http://127.0.0.1:5173',
+];
+
 /**
- * Middleware to require authentication via JWT (Cookie or Authorization Bearer header)
+ * CSRF Protection Middleware
+ * Verifies Origin / Referer for all state-changing HTTP methods
+ */
+function csrfProtection(req, res, next) {
+  // Safe read-only methods are exempt
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    return next();
+  }
+
+  const origin = req.headers.origin;
+  const referer = req.headers.referer;
+
+  // In test environment, skip CSRF check
+  if (process.env.NODE_ENV === 'test') {
+    return next();
+  }
+
+  if (origin) {
+    const isAllowed = allowedOrigins.some(
+      (allowed) => origin === allowed || origin.replace(/^https?:\/\//, '') === allowed.replace(/^https?:\/\//, '')
+    );
+    if (!isAllowed && process.env.NODE_ENV === 'production') {
+      return res.status(403).json({
+        success: false,
+        code: 'CSRF_BLOCKED',
+        message: 'Request blocked due to invalid origin.',
+      });
+    }
+  } else if (referer) {
+    const isAllowed = allowedOrigins.some((allowed) => referer.startsWith(allowed));
+    if (!isAllowed && process.env.NODE_ENV === 'production') {
+      return res.status(403).json({
+        success: false,
+        code: 'CSRF_BLOCKED',
+        message: 'Request blocked due to invalid referer.',
+      });
+    }
+  }
+
+  next();
+}
+
+/**
+ * Require valid JWT authentication (via Cookie or Bearer header)
  */
 async function authenticate(req, res, next) {
   try {
     let token = null;
 
-    // 1. Check HTTP-only cookie first
     if (req.cookies && req.cookies.accessToken) {
       token = req.cookies.accessToken;
-    }
-    // 2. Check Authorization header fallback
-    else if (
+    } else if (
       req.headers.authorization &&
       req.headers.authorization.startsWith('Bearer ')
     ) {
@@ -23,6 +75,7 @@ async function authenticate(req, res, next) {
     if (!token) {
       return res.status(401).json({
         success: false,
+        code: 'UNAUTHENTICATED',
         message: 'Authentication required. Please log in to continue.',
       });
     }
@@ -48,12 +101,12 @@ async function authenticate(req, res, next) {
       });
     }
 
-    // Verify user still exists in database
     const user = await User.findById(decoded.userId);
 
     if (!user) {
       return res.status(401).json({
         success: false,
+        code: 'USER_NOT_FOUND',
         message: 'User account associated with this session no longer exists.',
       });
     }
@@ -61,6 +114,7 @@ async function authenticate(req, res, next) {
     if (user.accountStatus !== 'active') {
       return res.status(403).json({
         success: false,
+        code: 'ACCOUNT_INACTIVE',
         message: `Account is ${user.accountStatus}. Please contact support.`,
       });
     }
@@ -73,56 +127,69 @@ async function authenticate(req, res, next) {
 }
 
 /**
- * Optional authentication: attaches user if valid token present, otherwise continues as guest
+ * Route guard: Require verified email
+ * Unverified users cannot access onboarding or app features
  */
-async function optionalAuth(req, res, next) {
-  try {
-    let token = null;
-    if (req.cookies && req.cookies.accessToken) {
-      token = req.cookies.accessToken;
-    } else if (
-      req.headers.authorization &&
-      req.headers.authorization.startsWith('Bearer ')
-    ) {
-      token = req.headers.authorization.split(' ')[1];
-    }
-
-    if (token) {
-      const accessSecret =
-        process.env.JWT_ACCESS_SECRET || 'saanjh_dev_access_secret_fallback_key';
-      try {
-        const decoded = jwt.verify(token, accessSecret);
-        const user = await User.findById(decoded.userId);
-        if (user && user.accountStatus === 'active') {
-          req.user = user;
-        }
-      } catch {
-        // Silently ignore invalid optional tokens
-      }
-    }
-    next();
-  } catch {
-    next();
+function requireVerified(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      code: 'UNAUTHENTICATED',
+      message: 'Authentication required.',
+    });
   }
+
+  if (!req.user.emailVerified) {
+    return res.status(403).json({
+      success: false,
+      code: 'UNVERIFIED_EMAIL',
+      onboardingStep: 'verify',
+      email: req.user.email,
+      message: 'Please verify your email address to continue.',
+    });
+  }
+
+  next();
 }
 
 /**
- * Role-based authorization middleware
+ * Route guard: Check user has completed prior onboarding steps
  */
-function requireRole(role) {
+const stepHierarchy = {
+  signup: 0,
+  verify: 1,
+  google_complete: 1,
+  profile: 2,
+  interests: 3,
+  interest_questions: 4,
+  done: 5,
+};
+
+function requireStep(requiredStep) {
   return (req, res, next) => {
-    if (!req.user || req.user.role !== role) {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
+
+    const userStepLevel = stepHierarchy[req.user.onboardingStep] || 0;
+    const requiredLevel = stepHierarchy[requiredStep] || 0;
+
+    if (userStepLevel < requiredLevel) {
       return res.status(403).json({
         success: false,
-        message: 'Forbidden: Insufficient permissions to access this resource.',
+        code: 'STEP_NOT_COMPLETED',
+        currentStep: req.user.onboardingStep,
+        message: `Please complete the previous onboarding steps first.`,
       });
     }
+
     next();
   };
 }
 
 module.exports = {
+  csrfProtection,
   authenticate,
-  optionalAuth,
-  requireRole,
+  requireVerified,
+  requireStep,
 };

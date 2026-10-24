@@ -49,6 +49,7 @@ function EyeIcon({ visible }: { visible: boolean }) {
 export default function SignupPage({ onNavigate }: SignupPageProps) {
   const { user, signup, loginWithGoogle } = useAuth();
   const googleBtnContainerRef = useRef<HTMLDivElement>(null);
+  const [isGoogleRendered, setIsGoogleRendered] = useState(false);
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -83,8 +84,18 @@ export default function SignupPage({ onNavigate }: SignupPageProps) {
             setIsSubmitting(true);
             setError(null);
             try {
-              await loginWithGoogle(response.credential);
-              onNavigate('/');
+              const loggedInUser = await loginWithGoogle(response.credential);
+              if (loggedInUser.onboardingStep === 'google_complete') {
+                onNavigate('/onboarding/google-complete');
+              } else if (loggedInUser.onboardingStep === 'profile') {
+                onNavigate('/onboarding/profile');
+              } else if (loggedInUser.onboardingStep === 'interests') {
+                onNavigate('/onboarding/interests');
+              } else if (loggedInUser.onboardingStep === 'interest_questions') {
+                onNavigate('/onboarding/interest-questions');
+              } else {
+                onNavigate('/dashboard');
+              }
             } catch (err: any) {
               setError(err.message || 'Google signup failed');
             } finally {
@@ -103,6 +114,7 @@ export default function SignupPage({ onNavigate }: SignupPageProps) {
           text: 'signup_with',
           shape: 'pill',
         });
+        setIsGoogleRendered(true);
       }
     } catch (e) {
       console.warn('Google Identity button note:', e);
@@ -148,13 +160,19 @@ export default function SignupPage({ onNavigate }: SignupPageProps) {
       newFieldErrors.confirmPassword = 'Passwords do not match';
     }
 
-    if (dateOfBirth) {
+    if (!dateOfBirth) {
+      newFieldErrors.dateOfBirth = 'Date of birth is required';
+    } else {
       const dob = new Date(dateOfBirth);
       const today = new Date();
       const cutoff = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
       if (dob > cutoff) {
         newFieldErrors.dateOfBirth = 'You must be at least 18 years old to join Saanjh';
       }
+    }
+
+    if (!genderIdentity) {
+      newFieldErrors.genderIdentity = 'Please select your gender identity';
     }
 
     if (!termsAccepted) {
@@ -174,11 +192,11 @@ export default function SignupPage({ onNavigate }: SignupPageProps) {
         password,
         confirmPassword,
         mobileNumber: mobileNumber || undefined,
-        dateOfBirth: dateOfBirth || undefined,
-        genderIdentity: genderIdentity || undefined,
+        dateOfBirth,
+        genderIdentity,
         termsAccepted,
       });
-      onNavigate('/');
+      onNavigate('/verify-email');
     } catch (err: any) {
       if (err instanceof ApiError && err.data?.errors) {
         const backendFieldErrors: Record<string, string> = {};
@@ -233,9 +251,7 @@ export default function SignupPage({ onNavigate }: SignupPageProps) {
 
               <div className="auth-visual-quote-static">
                 <b>“</b>
-                <span>
-                  It feels refreshing to connect based on shared values rather than endless superficial swipes. <b>”</b>
-                </span>
+                <span>It feels refreshing to connect based on shared values rather than endless superficial swipes.</span>
               </div>
             </div>
           </section>
@@ -259,15 +275,17 @@ export default function SignupPage({ onNavigate }: SignupPageProps) {
               {/* Google Sign-Up */}
               <div className="auth-page-google">
                 <div ref={googleBtnContainerRef} className="google-btn-rendered" />
-                <button
-                  type="button"
-                  className="google-custom-btn"
-                  onClick={handleGoogleClick}
-                  disabled={isSubmitting}
-                >
-                  <GoogleIcon />
-                  <span>Continue with Google</span>
-                </button>
+                {!isGoogleRendered && (
+                  <button
+                    type="button"
+                    className="google-custom-btn"
+                    onClick={handleGoogleClick}
+                    disabled={isSubmitting}
+                  >
+                    <GoogleIcon />
+                    <span>Continue with Google</span>
+                  </button>
+                )}
               </div>
 
               <div className="auth-divider">
@@ -275,37 +293,35 @@ export default function SignupPage({ onNavigate }: SignupPageProps) {
               </div>
 
               <form onSubmit={handleSubmit} className="auth-form" noValidate>
-                <div className="auth-field-row">
-                  <div className="auth-field">
-                    <label htmlFor="signup-page-name">Full Name *</label>
-                    <input
-                      id="signup-page-name"
-                      type="text"
-                      placeholder="e.g. Aarohi Sharma"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      required
-                    />
-                    {fieldErrors.fullName && (
-                      <span className="auth-field-error">{fieldErrors.fullName}</span>
-                    )}
-                  </div>
+                <div className="auth-field">
+                  <label htmlFor="signup-page-name">Full Name *</label>
+                  <input
+                    id="signup-page-name"
+                    type="text"
+                    placeholder="e.g. Aarohi Sharma"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    required
+                  />
+                  {fieldErrors.fullName && (
+                    <span className="auth-field-error">{fieldErrors.fullName}</span>
+                  )}
+                </div>
 
-                  <div className="auth-field">
-                    <label htmlFor="signup-page-email">Email Address *</label>
-                    <input
-                      id="signup-page-email"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      autoComplete="email"
-                      required
-                    />
-                    {fieldErrors.email && (
-                      <span className="auth-field-error">{fieldErrors.email}</span>
-                    )}
-                  </div>
+                <div className="auth-field">
+                  <label htmlFor="signup-page-email">Email Address *</label>
+                  <input
+                    id="signup-page-email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                    required
+                  />
+                  {fieldErrors.email && (
+                    <span className="auth-field-error">{fieldErrors.email}</span>
+                  )}
                 </div>
 
                 <div className="auth-field-row">
@@ -315,7 +331,7 @@ export default function SignupPage({ onNavigate }: SignupPageProps) {
                       <input
                         id="signup-page-password"
                         type={showPassword ? 'text' : 'password'}
-                        placeholder="Min 8 chars, 1 letter & 1 num"
+                        placeholder="Min 8 chars, 1 letter & 1 number"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         autoComplete="new-password"
@@ -430,7 +446,7 @@ export default function SignupPage({ onNavigate }: SignupPageProps) {
                     Sign in here →
                   </button>
                 </p>
-                <p style={{ marginTop: '4px' }}>
+                <p style={{ marginTop: '10px' }}>
                   <button
                     type="button"
                     onClick={() => onNavigate('/')}

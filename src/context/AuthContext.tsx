@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { api, User, LoginData, SignupData, UpdateProfileData, ApiError } from '../services/api';
+import { api, User, LoginData, SignupData, AuthResponse, ApiError } from '../services/api';
 
 interface Toast {
   message: string;
@@ -10,20 +10,19 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  pendingEmail: string;
+  setPendingEmail: (email: string) => void;
   toast: Toast | null;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   clearToast: () => void;
+  signup: (data: SignupData) => Promise<AuthResponse>;
+  verifyOtp: (code: string) => Promise<User>;
+  resendOtp: (emailOverride?: string) => Promise<void>;
   login: (data: LoginData) => Promise<User>;
-  signup: (data: SignupData) => Promise<User>;
   loginWithGoogle: (credential: string) => Promise<User>;
+  completeGoogle: (dateOfBirth: string, genderIdentity: string) => Promise<User>;
   logout: () => Promise<void>;
-  updateProfile: (data: UpdateProfileData) => Promise<User>;
-  isAuthModalOpen: boolean;
-  authModalView: 'login' | 'signup' | 'profile';
-  openLogin: () => void;
-  openSignup: () => void;
-  openProfile: () => void;
-  closeAuthModal: () => void;
+  refreshUser: () => Promise<User | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,22 +30,46 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalView, setAuthModalView] = useState<'login' | 'signup' | 'profile'>('login');
+  const [pendingEmail, setPendingEmailState] = useState<string>(() => {
+    return localStorage.getItem('saanjh_pending_email') || '';
+  });
   const [toast, setToast] = useState<Toast | null>(null);
+
+  const setPendingEmail = useCallback((email: string) => {
+    setPendingEmailState(email);
+    if (email) {
+      localStorage.setItem('saanjh_pending_email', email);
+    } else {
+      localStorage.removeItem('saanjh_pending_email');
+    }
+  }, []);
 
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToast({ message, type });
     setTimeout(() => {
       setToast((current) => (current?.message === message ? null : current));
-    }, 4500);
+    }, 5000);
   }, []);
 
   const clearToast = useCallback(() => {
     setToast(null);
   }, []);
 
-  // Check authentication session on initial page load (persistence across refreshes)
+  const refreshUser = useCallback(async (): Promise<User | null> => {
+    try {
+      const response = await api.auth.getMe();
+      if (response.success && response.user) {
+        setUser(response.user);
+        return response.user;
+      }
+      return null;
+    } catch {
+      setUser(null);
+      return null;
+    }
+  }, []);
+
+  // Check authentication session on initial page load
   useEffect(() => {
     let isMounted = true;
 
@@ -57,7 +80,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(response.user);
         }
       } catch {
-        // User is not authenticated yet or backend not reachable; set user to null
         if (isMounted) {
           setUser(null);
         }
@@ -75,46 +97,76 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const openLogin = useCallback(() => {
-    setAuthModalView('login');
-    setIsAuthModalOpen(true);
-  }, []);
+  const signup = async (data: SignupData): Promise<AuthResponse> => {
+    const response = await api.auth.signup(data);
+    setPendingEmail(data.email);
+    showToast('A 6-digit verification code has been sent to your email.', 'info');
+    return response;
+  };
 
-  const openSignup = useCallback(() => {
-    setAuthModalView('signup');
-    setIsAuthModalOpen(true);
-  }, []);
+  const verifyOtp = async (code: string): Promise<User> => {
+    const emailToVerify = pendingEmail || user?.email;
+    if (!emailToVerify) {
+      throw new ApiError('No email found to verify. Please return to the signup page.', 400);
+    }
 
-  const openProfile = useCallback(() => {
-    setAuthModalView('profile');
-    setIsAuthModalOpen(true);
-  }, []);
+    const response = await api.auth.verifyOtp({ email: emailToVerify, code });
+    if (!response.user) {
+      throw new ApiError('Verification response was missing user data.', 500);
+    }
 
-  const closeAuthModal = useCallback(() => {
-    setIsAuthModalOpen(false);
-  }, []);
-
-  const login = async (data: LoginData): Promise<User> => {
-    const response = await api.auth.login(data);
     setUser(response.user);
-    closeAuthModal();
-    showToast(`Welcome back, ${response.user.displayName || response.user.fullName}!`, 'success');
+    setPendingEmail(''); // Clear pending email
+    showToast(`Welcome to Saanjh, ${response.user.displayName || response.user.fullName}!`, 'success');
     return response.user;
   };
 
-  const signup = async (data: SignupData): Promise<User> => {
-    const response = await api.auth.signup(data);
-    setUser(response.user);
-    closeAuthModal();
-    showToast(`Welcome to Saanjh, ${response.user.fullName}! Your account is ready.`, 'success');
-    return response.user;
+  const resendOtp = async (emailOverride?: string): Promise<void> => {
+    const email = emailOverride || pendingEmail || user?.email;
+    if (!email) {
+      throw new ApiError('Email address is missing. Please sign up or log in first.', 400);
+    }
+
+    await api.auth.resendOtp({ email });
+    showToast('A new 6-digit verification code has been sent.', 'success');
+  };
+
+  const login = async (data: LoginData): Promise<User> => {
+    try {
+      const response = await api.auth.login(data);
+      if (!response.user) {
+        throw new ApiError('Login response was missing user data.', 500);
+      }
+      setUser(response.user);
+      showToast(`Welcome back, ${response.user.displayName || response.user.fullName}!`, 'success');
+      return response.user;
+    } catch (err: any) {
+      if (err.data?.code === 'UNVERIFIED_EMAIL') {
+        if (data.email) {
+          setPendingEmail(data.email);
+        }
+      }
+      throw err;
+    }
   };
 
   const loginWithGoogle = async (credential: string): Promise<User> => {
     const response = await api.auth.google(credential);
+    if (!response.user) {
+      throw new ApiError('Google login response was missing user data.', 500);
+    }
     setUser(response.user);
-    closeAuthModal();
     showToast(`Welcome, ${response.user.displayName || response.user.fullName}! Signed in with Google.`, 'success');
+    return response.user;
+  };
+
+  const completeGoogle = async (dateOfBirth: string, genderIdentity: string): Promise<User> => {
+    const response = await api.auth.googleComplete({ dateOfBirth, genderIdentity });
+    if (!response.user) {
+      throw new ApiError('Could not complete Google registration.', 500);
+    }
+    setUser(response.user);
+    showToast('Your account details are complete.', 'success');
     return response.user;
   };
 
@@ -125,16 +177,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.warn('Logout network error (clearing local state anyway):', err);
     } finally {
       setUser(null);
-      closeAuthModal();
+      setPendingEmail('');
       showToast('You have been logged out safely.', 'info');
     }
-  };
-
-  const updateProfile = async (data: UpdateProfileData): Promise<User> => {
-    const response = await api.users.updateMe(data);
-    setUser(response.user);
-    showToast('Your profile has been updated.', 'success');
-    return response.user;
   };
 
   return (
@@ -143,20 +188,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         isLoading,
         isAuthenticated: Boolean(user),
+        pendingEmail,
+        setPendingEmail,
         toast,
         showToast,
         clearToast,
-        login,
         signup,
+        verifyOtp,
+        resendOtp,
+        login,
         loginWithGoogle,
+        completeGoogle,
         logout,
-        updateProfile,
-        isAuthModalOpen,
-        authModalView,
-        openLogin,
-        openSignup,
-        openProfile,
-        closeAuthModal,
+        refreshUser,
       }}
     >
       {children}

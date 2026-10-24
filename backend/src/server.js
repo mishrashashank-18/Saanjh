@@ -4,11 +4,15 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const app = require('./app');
 const { connectDB } = require('./config/db');
+const { validateEnv } = require('./config/envValidator');
 const mongoose = require('mongoose');
 
 const PORT = process.env.PORT || 5000;
 
 async function startServer() {
+  // Validate environment variables
+  validateEnv();
+
   // Connect to MongoDB
   await connectDB();
 
@@ -20,6 +24,7 @@ async function startServer() {
   🌍 Environment: ${process.env.NODE_ENV || 'development'}
   🏥 Health check: http://localhost:${PORT}/api/health
   🔒 Auth endpoints: http://localhost:${PORT}/api/auth
+  🌱 Onboarding endpoints: http://localhost:${PORT}/api/onboarding
   👤 User endpoints: http://localhost:${PORT}/api/users
 =====================================================
     `);
@@ -37,7 +42,6 @@ async function startServer() {
       process.exit(0);
     });
 
-    // Force shutdown after timeout if pending requests hang
     setTimeout(() => {
       console.error('[Saanjh Backend] Forcefully shutting down after timeout.');
       process.exit(1);

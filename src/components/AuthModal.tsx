@@ -64,6 +64,7 @@ export default function AuthModal() {
   } = useAuth();
 
   const googleBtnContainerRef = useRef<HTMLDivElement>(null);
+  const [isGoogleRendered, setIsGoogleRendered] = useState(false);
 
   // Form states
   const [email, setEmail] = useState('');
@@ -154,6 +155,7 @@ export default function AuthModal() {
           text: authModalView === 'signup' ? 'signup_with' : 'signin_with',
           shape: 'pill',
         });
+        setIsGoogleRendered(true);
       }
     } catch (e) {
       console.warn('Google Identity button initialization note:', e);
@@ -427,15 +429,17 @@ export default function AuthModal() {
             {/* Google Authentication Container */}
             <div className="google-auth-section">
               <div ref={googleBtnContainerRef} className="google-btn-rendered" />
-              <button
-                type="button"
-                className="google-custom-btn"
-                onClick={handleGoogleButtonClick}
-                disabled={isSubmitting}
-              >
-                <GoogleIcon />
-                <span>Continue with Google</span>
-              </button>
+              {!isGoogleRendered && (
+                <button
+                  type="button"
+                  className="google-custom-btn"
+                  onClick={handleGoogleButtonClick}
+                  disabled={isSubmitting}
+                >
+                  <GoogleIcon />
+                  <span>Continue with Google</span>
+                </button>
+              )}
             </div>
 
             <p className="auth-switch-text">
@@ -596,15 +600,17 @@ export default function AuthModal() {
             {/* Google Authentication */}
             <div className="google-auth-section">
               <div ref={googleBtnContainerRef} className="google-btn-rendered" />
-              <button
-                type="button"
-                className="google-custom-btn"
-                onClick={handleGoogleButtonClick}
-                disabled={isSubmitting}
-              >
-                <GoogleIcon />
-                <span>Continue with Google</span>
-              </button>
+              {!isGoogleRendered && (
+                <button
+                  type="button"
+                  className="google-custom-btn"
+                  onClick={handleGoogleButtonClick}
+                  disabled={isSubmitting}
+                >
+                  <GoogleIcon />
+                  <span>Continue with Google</span>
+                </button>
+              )}
             </div>
 
             <p className="auth-switch-text">

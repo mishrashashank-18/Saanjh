@@ -48,6 +48,7 @@ function EyeIcon({ visible }: { visible: boolean }) {
 export default function LoginPage({ onNavigate }: LoginPageProps) {
   const { user, login, loginWithGoogle } = useAuth();
   const googleBtnContainerRef = useRef<HTMLDivElement>(null);
+  const [isGoogleRendered, setIsGoogleRendered] = useState(false);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -76,8 +77,18 @@ export default function LoginPage({ onNavigate }: LoginPageProps) {
             setIsSubmitting(true);
             setError(null);
             try {
-              await loginWithGoogle(response.credential);
-              onNavigate('/');
+              const loggedInUser = await loginWithGoogle(response.credential);
+              if (loggedInUser.onboardingStep === 'google_complete') {
+                onNavigate('/onboarding/google-complete');
+              } else if (loggedInUser.onboardingStep === 'profile') {
+                onNavigate('/onboarding/profile');
+              } else if (loggedInUser.onboardingStep === 'interests') {
+                onNavigate('/onboarding/interests');
+              } else if (loggedInUser.onboardingStep === 'interest_questions') {
+                onNavigate('/onboarding/interest-questions');
+              } else {
+                onNavigate('/dashboard');
+              }
             } catch (err: any) {
               setError(err.message || 'Google sign-in failed');
             } finally {
@@ -96,6 +107,7 @@ export default function LoginPage({ onNavigate }: LoginPageProps) {
           text: 'signin_with',
           shape: 'pill',
         });
+        setIsGoogleRendered(true);
       }
     } catch (e) {
       console.warn('Google Identity button note:', e);
@@ -137,9 +149,25 @@ export default function LoginPage({ onNavigate }: LoginPageProps) {
 
     setIsSubmitting(true);
     try {
-      await login({ email, password });
-      onNavigate('/');
+      const loggedInUser = await login({ email, password });
+      if (loggedInUser.onboardingStep === 'verify') {
+        onNavigate('/verify-email');
+      } else if (loggedInUser.onboardingStep === 'google_complete') {
+        onNavigate('/onboarding/google-complete');
+      } else if (loggedInUser.onboardingStep === 'profile') {
+        onNavigate('/onboarding/profile');
+      } else if (loggedInUser.onboardingStep === 'interests') {
+        onNavigate('/onboarding/interests');
+      } else if (loggedInUser.onboardingStep === 'interest_questions') {
+        onNavigate('/onboarding/interest-questions');
+      } else {
+        onNavigate('/dashboard');
+      }
     } catch (err: any) {
+      if (err.data?.code === 'UNVERIFIED_EMAIL') {
+        onNavigate('/verify-email');
+        return;
+      }
       setError(err.message || 'Invalid email or password. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -169,9 +197,7 @@ export default function LoginPage({ onNavigate }: LoginPageProps) {
 
               <div className="auth-visual-quote">
                 <b>“</b>
-                <span>
-                  The questions made all the difference. Real conversations, zero games. <b>”</b>
-                </span>
+                <span>The questions made all the difference. Real conversations, zero games.</span>
               </div>
 
               <div className="auth-visual-tags">
@@ -202,15 +228,17 @@ export default function LoginPage({ onNavigate }: LoginPageProps) {
               {/* Google Sign-In */}
               <div className="auth-page-google">
                 <div ref={googleBtnContainerRef} className="google-btn-rendered" />
-                <button
-                  type="button"
-                  className="google-custom-btn"
-                  onClick={handleGoogleClick}
-                  disabled={isSubmitting}
-                >
-                  <GoogleIcon />
-                  <span>Continue with Google</span>
-                </button>
+                {!isGoogleRendered && (
+                  <button
+                    type="button"
+                    className="google-custom-btn"
+                    onClick={handleGoogleClick}
+                    disabled={isSubmitting}
+                  >
+                    <GoogleIcon />
+                    <span>Continue with Google</span>
+                  </button>
+                )}
               </div>
 
               <div className="auth-divider">
@@ -294,7 +322,7 @@ export default function LoginPage({ onNavigate }: LoginPageProps) {
                     Create an account here →
                   </button>
                 </p>
-                <p style={{ marginTop: '4px' }}>
+                <p style={{ marginTop: '10px' }}>
                   <button
                     type="button"
                     onClick={() => onNavigate('/')}

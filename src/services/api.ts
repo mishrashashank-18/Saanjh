@@ -10,7 +10,9 @@ export interface User {
   displayName: string;
   email: string;
   googleId?: string | null;
+  authProvider?: 'local' | 'google';
   emailVerified: boolean;
+  onboardingStep: 'signup' | 'verify' | 'google_complete' | 'profile' | 'interests' | 'interest_questions' | 'done';
   mobileNumber?: string;
   dateOfBirth?: string | null;
   genderIdentity?: string;
@@ -32,7 +34,9 @@ export interface User {
 export interface AuthResponse {
   success: boolean;
   message: string;
-  user: User;
+  user?: User;
+  onboardingStep?: User['onboardingStep'];
+  email?: string;
   accessToken?: string;
 }
 
@@ -52,36 +56,88 @@ export interface LoginData {
   password: string;
 }
 
-export interface UpdateProfileData {
-  fullName?: string;
-  displayName?: string;
-  mobileNumber?: string;
-  dateOfBirth?: string;
-  genderIdentity?: string;
-  bio?: string;
-  city?: string;
-  education?: string;
-  occupation?: string;
-  languages?: string[];
-  relationshipStatus?: string;
-  interests?: string[];
-  profilePhoto?: string;
+export interface PartnerPriorities {
+  attractiveness: number;
+  sincerity: number;
+  intelligence: number;
+  humour: number;
+  ambition: number;
+  sharedInterests: number;
 }
 
-// API Base URL from environment variable or default to backend port 5000 / relative proxy
+export interface ProfileData {
+  genderPreference: string[];
+  ageRange: { min: number; max: number };
+  relationshipGoal: string;
+  city: string;
+  maxDistanceKm: number;
+  languages: string[];
+  partnerPriorities: PartnerPriorities;
+  goingOutFrequency: string;
+  culturalImportance?: string;
+  dealBreakers?: string;
+  notes?: string;
+  isFinalSubmit?: boolean;
+}
+
+export interface InterestCatalogItem {
+  slug: string;
+  label: string;
+}
+
+export interface InterestCategoryCatalog {
+  key: string;
+  label: string;
+  items: InterestCatalogItem[];
+}
+
+export interface UserInterestsData {
+  categories: string[];
+  interests: string[];
+  top3: string[];
+  skip?: boolean;
+}
+
+export interface QuestionItem {
+  text: string;
+  options: string[];
+  skippable?: boolean;
+  isSensitive?: boolean;
+}
+
+export interface CategoryQuestionData {
+  category: string;
+  categoryLabel: string;
+  questions: QuestionItem[];
+  answer?: {
+    q1?: string;
+    q2?: string;
+    sharePreference?: string;
+  } | null;
+  sharedQuestion: {
+    text: string;
+    options: string[];
+  };
+}
+
+// API Base URL
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
 
-class ApiError extends Error {
+export class ApiError extends Error {
   statusCode: number;
+  code?: string;
   data?: any;
   field?: string;
+  retryAfter?: number;
 
-  constructor(message: string, statusCode: number, data?: any, field?: string) {
+  constructor(message: string, statusCode: number, data?: any, field?: string, code?: string, retryAfter?: number) {
     super(message);
     this.name = 'ApiError';
     this.statusCode = statusCode;
     this.data = data;
     this.field = field;
+    this.code = code;
+    this.retryAfter = retryAfter;
   }
 }
 
@@ -105,9 +161,11 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     response = await fetch(url, config);
   } catch (networkError: any) {
     throw new ApiError(
-      'Unable to connect to the Saanjh server. Please ensure the backend server is running on port 5000.',
+      'Unable to connect to the Saanjh server. Please check your internet connection or verify the server is running.',
       0,
-      networkError
+      networkError,
+      undefined,
+      'NETWORK_ERROR'
     );
   }
 
@@ -122,9 +180,22 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   }
 
   if (!response.ok) {
-    const errorMessage =
-      data.message || `Request failed with status ${response.status}`;
-    throw new ApiError(errorMessage, response.status, data, data.field);
+    let friendlyMessage = data.message || `Request failed with status ${response.status}`;
+
+    if (response.status === 429) {
+      friendlyMessage = data.message || 'You have made too many requests. Please pause for a moment and try again.';
+    } else if (response.status === 401) {
+      friendlyMessage = data.message || 'Your session has expired. Please log in again.';
+    }
+
+    throw new ApiError(
+      friendlyMessage,
+      response.status,
+      data,
+      data.field,
+      data.code,
+      data.retryAfter
+    );
   }
 
   return data as T;
@@ -134,6 +205,20 @@ export const api = {
   auth: {
     signup(data: SignupData): Promise<AuthResponse> {
       return request<AuthResponse>('/api/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    verifyOtp(data: { email: string; code: string }): Promise<AuthResponse> {
+      return request<AuthResponse>('/api/auth/verify-otp', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    resendOtp(data: { email: string }): Promise<{ success: boolean; message: string }> {
+      return request<{ success: boolean; message: string }>('/api/auth/resend-otp', {
         method: 'POST',
         body: JSON.stringify(data),
       });
@@ -153,37 +238,79 @@ export const api = {
       });
     },
 
+    googleComplete(data: { dateOfBirth: string; genderIdentity: string }): Promise<AuthResponse> {
+      return request<AuthResponse>('/api/auth/google-complete', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
     logout(): Promise<{ success: boolean; message: string }> {
       return request<{ success: boolean; message: string }>('/api/auth/logout', {
         method: 'POST',
       });
     },
 
-    getMe(): Promise<{ success: boolean; user: User }> {
-      return request<{ success: boolean; user: User }>('/api/auth/me', {
+    getMe(): Promise<{ success: boolean; user: User; onboardingStep: User['onboardingStep'] }> {
+      return request<{ success: boolean; user: User; onboardingStep: User['onboardingStep'] }>('/api/auth/me', {
         method: 'GET',
       });
     },
   },
 
-  users: {
-    getMe(): Promise<{ success: boolean; user: User }> {
-      return request<{ success: boolean; user: User }>('/api/users/me', {
-        method: 'GET',
-      });
+  onboarding: {
+    getProfile(): Promise<{ success: boolean; profile: ProfileData; user: Partial<User> }> {
+      return request('/api/onboarding/profile', { method: 'GET' });
     },
 
-    updateMe(data: UpdateProfileData): Promise<{ success: boolean; message: string; user: User }> {
-      return request<{ success: boolean; message: string; user: User }>('/api/users/me', {
-        method: 'PATCH',
+    saveProfile(data: Partial<ProfileData>): Promise<{ success: boolean; message: string; profile: ProfileData; onboardingStep: User['onboardingStep'] }> {
+      return request('/api/onboarding/profile', {
+        method: 'POST',
         body: JSON.stringify(data),
       });
     },
 
-    updatePhoto(photoUrl: string): Promise<{ success: boolean; message: string; profilePhoto: string; user: User }> {
-      return request<{ success: boolean; message: string; profilePhoto: string; user: User }>('/api/users/me/photo', {
+    getCatalog(): Promise<{ success: boolean; catalog: Record<string, InterestCategoryCatalog> }> {
+      return request('/api/onboarding/interests/catalog', { method: 'GET' });
+    },
+
+    getUserInterests(): Promise<{ success: boolean; userInterests: UserInterestsData }> {
+      return request('/api/onboarding/interests', { method: 'GET' });
+    },
+
+    saveUserInterests(data: UserInterestsData): Promise<{ success: boolean; message: string; userInterests?: UserInterestsData; onboardingStep: User['onboardingStep'] }> {
+      return request('/api/onboarding/interests', {
         method: 'POST',
-        body: JSON.stringify({ photoUrl }),
+        body: JSON.stringify(data),
+      });
+    },
+
+    getQuestions(): Promise<{ success: boolean; topCategories: string[]; categoriesQuestions: CategoryQuestionData[] }> {
+      return request('/api/onboarding/questions', { method: 'GET' });
+    },
+
+    saveAnswer(data: { category: string; q1: string; q2: string; sharePreference: string }): Promise<{ success: boolean; message: string; completedAll: boolean; onboardingStep: User['onboardingStep'] }> {
+      return request('/api/onboarding/answers', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    getSettings(): Promise<{ success: boolean; user: User; profile: ProfileData | null; userInterests: UserInterestsData | null }> {
+      return request('/api/onboarding/settings', { method: 'GET' });
+    },
+
+    updateSettingsProfile(data: Partial<ProfileData>): Promise<{ success: boolean; message: string; profile: ProfileData }> {
+      return request('/api/onboarding/settings/profile', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+    },
+
+    updateSettingsInterests(data: UserInterestsData): Promise<{ success: boolean; message: string; userInterests: UserInterestsData }> {
+      return request('/api/onboarding/settings/interests', {
+        method: 'PUT',
+        body: JSON.stringify(data),
       });
     },
   },
@@ -195,5 +322,4 @@ export const api = {
   },
 };
 
-export { ApiError };
 export default api;

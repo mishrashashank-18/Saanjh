@@ -1,31 +1,63 @@
 const mongoose = require('mongoose');
 
 let isConnected = false;
+let memoryServerInstance = null;
 
 async function connectDB() {
-  const uri = process.env.MONGODB_URI;
+  let uri = process.env.MONGODB_URI;
 
-  if (!uri || uri.trim() === '') {
-    console.warn(
-      '\n[Saanjh Backend] Warning: MONGODB_URI is not defined in backend/.env.\n' +
-      'Database operations will fail until a valid MongoDB connection string is provided.\n' +
-      'Follow the setup instructions to create a MongoDB Atlas cluster and set MONGODB_URI in backend/.env.\n'
-    );
-    return null;
+  // In development, if MONGODB_URI is not provided or explicitly 'memory', spin up MongoMemoryServer
+  if (!uri || uri.trim() === '' || uri === 'memory') {
+    if (process.env.NODE_ENV !== 'production') {
+      try {
+        const { MongoMemoryServer } = require('mongodb-memory-server');
+        if (!memoryServerInstance) {
+          memoryServerInstance = await MongoMemoryServer.create();
+        }
+        uri = memoryServerInstance.getUri();
+        console.log(`[Saanjh Backend] Starting in-memory MongoDB instance for development at: ${uri}`);
+      } catch (err) {
+        console.error(`[Saanjh Backend] Failed to start in-memory MongoDB: ${err.message}`);
+        return null;
+      }
+    } else {
+      console.error(
+        '\n[Saanjh Backend Error] MONGODB_URI is not defined in backend/.env.\n' +
+        'Database connection refused. Server cannot start without a valid MongoDB URI in production.\n'
+      );
+      process.exit(1);
+    }
   }
 
   try {
     const conn = await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 8000,
-      autoIndex: process.env.NODE_ENV !== 'production',
+      serverSelectionTimeoutMS: 5000,
+      autoIndex: true,
     });
 
     isConnected = true;
-    console.log(`[Saanjh Backend] MongoDB connected successfully to host: ${conn.connection.host}`);
+    console.log(`[Saanjh Backend] MongoDB connected successfully: ${conn.connection.host}`);
     return conn;
   } catch (error) {
-    console.error(`[Saanjh Backend] MongoDB connection error: ${error.message}`);
-    // Do not crash the entire process immediately in development so health check and other services can respond
+    console.error(`\n[Saanjh Backend Error] Could not connect to MongoDB at: ${uri}`);
+    console.error(`Details: ${error.message}\n`);
+
+    // In development, if connecting to localhost failed, fallback to in-memory server
+    if (process.env.NODE_ENV !== 'production' && !memoryServerInstance) {
+      try {
+        console.log('[Saanjh Backend] Falling back to in-memory MongoDB for local development session...');
+        const { MongoMemoryServer } = require('mongodb-memory-server');
+        memoryServerInstance = await MongoMemoryServer.create();
+        const memUri = memoryServerInstance.getUri();
+        const conn = await mongoose.connect(memUri);
+        isConnected = true;
+        console.log(`[Saanjh Backend] MongoDB fallback connected successfully.`);
+        return conn;
+      } catch (memErr) {
+        console.error(`[Saanjh Backend] Fallback in-memory MongoDB failed: ${memErr.message}`);
+      }
+    }
+
     if (process.env.NODE_ENV === 'production') {
       process.exit(1);
     }
@@ -46,7 +78,7 @@ mongoose.connection.on('reconnected', () => {
 function getDBStatus() {
   return {
     isConnected: mongoose.connection.readyState === 1,
-    readyState: mongoose.connection.readyState, // 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
+    readyState: mongoose.connection.readyState,
   };
 }
 
