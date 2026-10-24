@@ -144,9 +144,12 @@ export class ApiError extends Error {
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
 
+  const token = typeof window !== 'undefined' ? localStorage.getItem('saanjh_token') : null;
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers as Record<string, string>),
   };
 
@@ -210,11 +213,15 @@ export const api = {
       });
     },
 
-    verifyOtp(data: { email: string; code: string }): Promise<AuthResponse> {
-      return request<AuthResponse>('/api/auth/verify-otp', {
+    async verifyOtp(data: { email: string; code: string }): Promise<AuthResponse> {
+      const res = await request<AuthResponse>('/api/auth/verify-otp', {
         method: 'POST',
         body: JSON.stringify(data),
       });
+      if (res.accessToken && typeof window !== 'undefined') {
+        localStorage.setItem('saanjh_token', res.accessToken);
+      }
+      return res;
     },
 
     resendOtp(data: { email: string }): Promise<{ success: boolean; message: string }> {
@@ -224,31 +231,49 @@ export const api = {
       });
     },
 
-    login(data: LoginData): Promise<AuthResponse> {
-      return request<AuthResponse>('/api/auth/login', {
+    async login(data: LoginData): Promise<AuthResponse> {
+      const res = await request<AuthResponse>('/api/auth/login', {
         method: 'POST',
         body: JSON.stringify(data),
       });
+      if (res.accessToken && typeof window !== 'undefined') {
+        localStorage.setItem('saanjh_token', res.accessToken);
+      }
+      return res;
     },
 
-    google(credential: string): Promise<AuthResponse> {
-      return request<AuthResponse>('/api/auth/google', {
+    async google(credential: string): Promise<AuthResponse> {
+      const res = await request<AuthResponse>('/api/auth/google', {
         method: 'POST',
         body: JSON.stringify({ credential }),
       });
+      if (res.accessToken && typeof window !== 'undefined') {
+        localStorage.setItem('saanjh_token', res.accessToken);
+      }
+      return res;
     },
 
-    googleComplete(data: { dateOfBirth: string; genderIdentity: string }): Promise<AuthResponse> {
-      return request<AuthResponse>('/api/auth/google-complete', {
+    async googleComplete(data: { dateOfBirth: string; genderIdentity: string }): Promise<AuthResponse> {
+      const res = await request<AuthResponse>('/api/auth/google-complete', {
         method: 'POST',
         body: JSON.stringify(data),
       });
+      if (res.accessToken && typeof window !== 'undefined') {
+        localStorage.setItem('saanjh_token', res.accessToken);
+      }
+      return res;
     },
 
-    logout(): Promise<{ success: boolean; message: string }> {
-      return request<{ success: boolean; message: string }>('/api/auth/logout', {
-        method: 'POST',
-      });
+    async logout(): Promise<{ success: boolean; message: string }> {
+      try {
+        return await request<{ success: boolean; message: string }>('/api/auth/logout', {
+          method: 'POST',
+        });
+      } finally {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('saanjh_token');
+        }
+      }
     },
 
     getMe(): Promise<{ success: boolean; user: User; onboardingStep: User['onboardingStep'] }> {

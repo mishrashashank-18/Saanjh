@@ -507,12 +507,12 @@ async function completeGoogleProfile(req, res, next) {
     }
     await user.save();
 
-    return res.status(200).json({
-      success: true,
-      message: 'Account details saved successfully.',
-      user: user.toJSON(),
-      onboardingStep: user.onboardingStep,
-    });
+    return sendAuthResponse(
+      res,
+      200,
+      user,
+      'Account details saved successfully.'
+    );
   } catch (error) {
     next(error);
   }

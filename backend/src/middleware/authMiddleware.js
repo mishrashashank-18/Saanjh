@@ -3,6 +3,7 @@ const User = require('../models/User');
 
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:8443',
+  'https://saanjh-vj7v.onrender.com',
   'http://localhost:8443',
   'https://localhost:8443',
   'http://localhost:5173',
