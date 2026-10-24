@@ -42,7 +42,7 @@ export default function GoogleCompletePage({ onNavigate }: GoogleCompletePagePro
 
     setIsSubmitting(true);
     try {
-      await completeGoogle(dateOfBirth, genderIdentity);
+      await completeGoogle(dateOfBirth, genderIdentity, user?.email);
       onNavigate('/onboarding/profile');
     } catch (err: any) {
       if (err instanceof ApiError && err.data?.errors) {

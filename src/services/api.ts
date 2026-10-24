@@ -253,7 +253,7 @@ export const api = {
       return res;
     },
 
-    async googleComplete(data: { dateOfBirth: string; genderIdentity: string }): Promise<AuthResponse> {
+    async googleComplete(data: { dateOfBirth: string; genderIdentity: string; email?: string }): Promise<AuthResponse> {
       const res = await request<AuthResponse>('/api/auth/google-complete', {
         method: 'POST',
         body: JSON.stringify(data),

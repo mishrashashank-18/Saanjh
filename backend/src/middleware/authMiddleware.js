@@ -128,6 +128,44 @@ async function authenticate(req, res, next) {
 }
 
 /**
+ * Optional authentication middleware:
+ * Attaches req.user if a valid token is provided (cookie or Bearer),
+ * otherwise continues without rejecting.
+ */
+async function optionalAuth(req, res, next) {
+  try {
+    let token = null;
+
+    if (req.cookies && req.cookies.accessToken) {
+      token = req.cookies.accessToken;
+    } else if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith('Bearer ')
+    ) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (token) {
+      const accessSecret =
+        process.env.JWT_ACCESS_SECRET || 'saanjh_dev_access_secret_fallback_key';
+      try {
+        const decoded = jwt.verify(token, accessSecret);
+        const user = await User.findById(decoded.userId);
+        if (user && user.accountStatus === 'active') {
+          req.user = user;
+        }
+      } catch {
+        // Token invalid or expired, continue without user
+      }
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * Route guard: Require verified email
  * Unverified users cannot access onboarding or app features
  */
@@ -191,6 +229,7 @@ function requireStep(requiredStep) {
 module.exports = {
   csrfProtection,
   authenticate,
+  optionalAuth,
   requireVerified,
   requireStep,
 };

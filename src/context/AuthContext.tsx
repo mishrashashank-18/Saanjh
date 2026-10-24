@@ -20,7 +20,7 @@ interface AuthContextType {
   resendOtp: (emailOverride?: string) => Promise<void>;
   login: (data: LoginData) => Promise<User>;
   loginWithGoogle: (credential: string) => Promise<User>;
-  completeGoogle: (dateOfBirth: string, genderIdentity: string) => Promise<User>;
+  completeGoogle: (dateOfBirth: string, genderIdentity: string, email?: string) => Promise<User>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<User | null>;
 }
@@ -160,10 +160,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return response.user;
   };
 
-  const completeGoogle = async (dateOfBirth: string, genderIdentity: string): Promise<User> => {
-    const response = await api.auth.googleComplete({ dateOfBirth, genderIdentity });
+  const completeGoogle = async (dateOfBirth: string, genderIdentity: string, email?: string): Promise<User> => {
+    const userEmail = email || user?.email;
+    const response = await api.auth.googleComplete({ dateOfBirth, genderIdentity, email: userEmail });
     if (!response.user) {
       throw new ApiError('Could not complete Google registration.', 500);
+    }
+    if (response.accessToken) {
+      localStorage.setItem('saanjh_token', response.accessToken);
     }
     setUser(response.user);
     showToast('Your account details are complete.', 'success');

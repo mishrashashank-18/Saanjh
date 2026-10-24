@@ -1,7 +1,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const authController = require('../controllers/authController');
-const { authenticate, csrfProtection } = require('../middleware/authMiddleware');
+const { authenticate, optionalAuth, csrfProtection } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
@@ -34,7 +34,7 @@ router.post('/verify-otp', otpLimiter, csrfProtection, authController.verifyUser
 router.post('/resend-otp', otpLimiter, csrfProtection, authController.resendUserOtp);
 router.post('/login', authLimiter, csrfProtection, authController.login);
 router.post('/google', authLimiter, csrfProtection, authController.googleAuth);
-router.post('/google-complete', authenticate, csrfProtection, authController.completeGoogleProfile);
+router.post('/google-complete', optionalAuth, csrfProtection, authController.completeGoogleProfile);
 router.post('/logout', csrfProtection, authController.logout);
 router.get('/me', authenticate, authController.getCurrentUser);
 

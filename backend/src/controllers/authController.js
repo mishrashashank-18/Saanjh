@@ -103,6 +103,7 @@ const resendOtpSchema = z.object({
 });
 
 const googleCompleteSchema = z.object({
+  email: z.string().email().optional(),
   dateOfBirth: z
     .string({ required_error: 'Date of birth is required' })
     .refine((val) => isAtLeast18(val), 'You must be at least 18 years old to join Saanjh'),
@@ -498,7 +499,23 @@ async function googleAuth(req, res, next) {
 async function completeGoogleProfile(req, res, next) {
   try {
     const validatedData = googleCompleteSchema.parse(req.body);
-    const user = req.user;
+    let user = req.user;
+
+    // Fallback: If cookies were blocked, lookup by verified Google email
+    if (!user && validatedData.email) {
+      user = await User.findOne({
+        email: validatedData.email.toLowerCase().trim(),
+        authProvider: 'google',
+      });
+    }
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        code: 'UNAUTHENTICATED',
+        message: 'Authentication required. Please log in to continue.',
+      });
+    }
 
     user.dateOfBirth = new Date(validatedData.dateOfBirth);
     user.genderIdentity = validatedData.genderIdentity;
