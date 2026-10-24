@@ -324,7 +324,7 @@ export default function InterestsOnboardingPage({ onNavigate }: InterestsOnboard
                         type="button"
                         onClick={() => toggleCategory(catKey)}
                         style={{
-                          padding: '14px 10px',
+                          padding: '16px 10px',
                           borderRadius: '16px',
                           border: isSelected ? '2px solid var(--coral)' : '1px solid #ebdcd0',
                           background: isSelected ? 'var(--peach)' : '#ffffff',
@@ -337,12 +337,16 @@ export default function InterestsOnboardingPage({ onNavigate }: InterestsOnboard
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
+                          justifyContent: 'center',
+                          minHeight: '74px',
                           gap: '6px',
                         }}
                       >
-                        <span style={{ fontSize: '18px' }}>
-                          {isSelected ? '✓' : '✦'}
-                        </span>
+                        {isSelected && (
+                          <span style={{ fontSize: '15px', color: 'var(--coral)' }}>
+                            ✓
+                          </span>
+                        )}
                         <span>{catInfo?.label || catKey}</span>
                       </button>
                     );

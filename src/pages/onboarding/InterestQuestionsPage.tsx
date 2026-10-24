@@ -197,44 +197,181 @@ export default function InterestQuestionsPage({ onNavigate }: InterestQuestionsP
     }
   }
 
-  // Friendly skeleton loading state
+  // Friendly skeleton loading state with full visual continuity & attractive image
   if (isLoading) {
     return (
       <div className="auth-page-root">
         <main className="auth-page-main">
-          <div className="auth-page-container signup-container" style={{ maxWidth: '640px', padding: '36px' }}>
-            <div style={{ textAlign: 'center', width: '100%' }}>
-              <div
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '50%',
-                  background: 'var(--peach)',
-                  color: 'var(--coral)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '22px',
-                  marginBottom: '16px',
-                  animation: 'pulse 1.8s infinite ease-in-out',
-                }}
-              >
-                ✦
-              </div>
-              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', color: 'var(--ink)', marginBottom: '8px' }}>
-                Preparing questions for you...
-              </h2>
-              <p style={{ color: '#7a7067', fontSize: '14.5px', marginBottom: '28px' }}>
-                Tailoring thoughtful prompts to your chosen passions.
-              </p>
+          <div className="auth-page-container signup-container">
+            {/* Left Column: Consistent Visual Brand Story */}
+            <section className="auth-page-visual">
+              <div className="auth-visual-inner">
+                <div className="auth-visual-badge">Step 3 of 3: Deep Compatibility</div>
+                <h2>How you experience what you love.</h2>
+                <p>
+                  Two people can both love music or travel, but live it very differently. These single-tap reflections bring out your genuine personal rhythm.
+                </p>
 
-              {/* Skeleton cards */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '420px', margin: '0 auto' }}>
-                <div style={{ height: '56px', background: '#f5eee6', borderRadius: '14px', opacity: 0.8 }} />
-                <div style={{ height: '56px', background: '#f5eee6', borderRadius: '14px', opacity: 0.6 }} />
-                <div style={{ height: '56px', background: '#f5eee6', borderRadius: '14px', opacity: 0.4 }} />
+                <div className="auth-steps-list">
+                  <div className="auth-step-item">
+                    <span className="auth-step-num">✓</span>
+                    <div>
+                      <strong>Profile completed</strong>
+                      <p>Orientation, priorities, and lifestyle.</p>
+                    </div>
+                  </div>
+                  <div className="auth-step-item">
+                    <span className="auth-step-num">✓</span>
+                    <div>
+                      <strong>Interests selected</strong>
+                      <p>Chosen categories and passions.</p>
+                    </div>
+                  </div>
+                  <div className="auth-step-item">
+                    <span className="auth-step-num" style={{ background: 'var(--coral)' }}>3</span>
+                    <div>
+                      <strong style={{ color: 'var(--coral)' }}>Thoughtful questions</strong>
+                      <p>Tailoring prompts to your passions...</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="auth-visual-quote-static">
+                  <b>“</b>
+                  <span>
+                    The questions weren't a test — they just captured who I really am on a free Sunday afternoon. <b>”</b>
+                  </span>
+                </div>
               </div>
-            </div>
+            </section>
+
+            {/* Right Column: Attractive Loading Phase Card */}
+            <section className="auth-page-form-wrap">
+              <div className="auth-form-container" style={{ maxWidth: '520px' }}>
+                {/* Header Tag */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span className="auth-form-tag">
+                    Step 3 of 3: Reflections
+                  </span>
+                  <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--coral)' }}>
+                    Personalizing...
+                  </span>
+                </div>
+
+                {/* Shimmer progress bar */}
+                <div
+                  style={{
+                    width: '100%',
+                    height: '6px',
+                    background: '#f2e6dc',
+                    borderRadius: '999px',
+                    overflow: 'hidden',
+                    marginBottom: '18px',
+                  }}
+                >
+                  <div
+                    style={{
+                      height: '100%',
+                      width: '65%',
+                      background: 'linear-gradient(90deg, var(--coral), var(--coral-dark))',
+                      borderRadius: '999px',
+                      animation: 'pulse 1.6s infinite ease-in-out',
+                    }}
+                  />
+                </div>
+
+                {/* Engaging Banner Image */}
+                <div
+                  style={{
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    height: '160px',
+                    marginBottom: '20px',
+                    position: 'relative',
+                    boxShadow: '0 8px 24px rgba(45, 30, 20, 0.08)',
+                    border: '1px solid rgba(235, 220, 208, 0.8)',
+                  }}
+                >
+                  <img
+                    src="/images/notebook-reference.png"
+                    alt="Thoughtful reflections"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      display: 'block',
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: 'linear-gradient(to top, rgba(35, 25, 18, 0.65) 0%, rgba(35, 25, 18, 0.15) 50%, transparent 100%)',
+                      display: 'flex',
+                      alignItems: 'flex-end',
+                      padding: '14px 16px',
+                    }}
+                  >
+                    <span
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.94)',
+                        color: 'var(--coral-dark)',
+                        fontSize: '11.5px',
+                        fontWeight: '700',
+                        padding: '4px 12px',
+                        borderRadius: '999px',
+                        letterSpacing: '0.4px',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                      }}
+                    >
+                      Curating Deep Compatibility Prompts
+                    </span>
+                  </div>
+                </div>
+
+                <h1 style={{ fontSize: '24px', marginBottom: '6px' }}>
+                  Preparing questions for you...
+                </h1>
+                <p style={{ fontSize: '14.5px', color: '#6a6158', marginBottom: '22px' }}>
+                  Tailoring thoughtful prompts to your chosen passions and conversation style.
+                </p>
+
+                {/* Warm Animated Skeleton Question Cards */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div
+                    style={{
+                      padding: '16px',
+                      borderRadius: '14px',
+                      border: '1px solid #ebdcd0',
+                      background: '#fffdfa',
+                      animation: 'pulse 1.8s infinite ease-in-out',
+                    }}
+                  >
+                    <div style={{ height: '14px', width: '70%', background: '#f0e5dc', borderRadius: '6px', marginBottom: '12px' }} />
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <div style={{ height: '32px', width: '45%', background: '#faefe6', borderRadius: '999px' }} />
+                      <div style={{ height: '32px', width: '45%', background: '#faefe6', borderRadius: '999px' }} />
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      padding: '16px',
+                      borderRadius: '14px',
+                      border: '1px solid #ebdcd0',
+                      background: '#fffdfa',
+                      opacity: 0.65,
+                    }}
+                  >
+                    <div style={{ height: '14px', width: '55%', background: '#f0e5dc', borderRadius: '6px', marginBottom: '12px' }} />
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <div style={{ height: '32px', width: '40%', background: '#faefe6', borderRadius: '999px' }} />
+                      <div style={{ height: '32px', width: '40%', background: '#faefe6', borderRadius: '999px' }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
           </div>
         </main>
       </div>
