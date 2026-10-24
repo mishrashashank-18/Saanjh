@@ -329,13 +329,31 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
               )}
             </div>
 
-            <button
-              type="button"
-              onClick={() => onNavigate('/onboarding/interests')}
-              className="primary-button"
-            >
-              Re-select Interests & Top 3 →
-            </button>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '24px' }}>
+              <button
+                type="button"
+                onClick={() => onNavigate('/onboarding/interest-questions')}
+                className="primary-button"
+              >
+                Attempt / Review Compatibility Questions →
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigate('/onboarding/interests')}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '999px',
+                  border: '1.5px solid #ded8d0',
+                  background: '#ffffff',
+                  fontSize: '15px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  color: 'var(--ink)',
+                }}
+              >
+                Re-select Interests & Top 3
+              </button>
+            </div>
           </div>
         )}
       </main>

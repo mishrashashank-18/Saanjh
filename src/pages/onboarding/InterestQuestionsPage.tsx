@@ -32,21 +32,35 @@ export default function InterestQuestionsPage({ onNavigate }: InterestQuestionsP
 
           res.categoriesQuestions.forEach((cq, catIdx) => {
             initialAnswers[cq.category] = {};
+            let isCategorySkipped = false;
+            let answeredCount = 0;
+
             if (cq.answers && cq.answers.length > 0) {
               cq.answers.forEach((ans: any) => {
-                if (ans.questionIndex !== undefined) {
-                  initialAnswers[cq.category][ans.questionIndex] = ans.selectedValue || ans.sharePreference || '';
+                if (ans.skipped || ans.selectedValue === 'skipped') {
+                  isCategorySkipped = true;
+                } else if (ans.questionIndex !== undefined && ans.selectedValue) {
+                  initialAnswers[cq.category][ans.questionIndex] = ans.selectedValue;
+                  answeredCount++;
                 }
               });
             } else if (cq.answer) {
-              if (cq.answer.q1) initialAnswers[cq.category][0] = cq.answer.q1;
-              if (cq.answer.q2) initialAnswers[cq.category][1] = cq.answer.q2;
-              if (cq.answer.sharePreference) initialAnswers[cq.category][4] = cq.answer.sharePreference;
+              if (cq.answer.q1 && cq.answer.q1 !== 'skipped') {
+                initialAnswers[cq.category][0] = cq.answer.q1;
+                answeredCount++;
+              }
+              if (cq.answer.q2 && cq.answer.q2 !== 'skipped') {
+                initialAnswers[cq.category][1] = cq.answer.q2;
+                answeredCount++;
+              }
+              if (cq.answer.sharePreference && cq.answer.sharePreference !== 'skipped') {
+                initialAnswers[cq.category][4] = cq.answer.sharePreference;
+                answeredCount++;
+              }
             }
 
-            // Check if this category has answers
-            const ansCount = Object.keys(initialAnswers[cq.category]).length;
-            if (!foundUnanswered && ansCount < 4) {
+            // Find first category that was skipped or not fully answered
+            if (!foundUnanswered && (isCategorySkipped || answeredCount < 4)) {
               firstUnansweredIdx = catIdx;
               foundUnanswered = true;
             }
@@ -480,6 +494,50 @@ export default function InterestQuestionsPage({ onNavigate }: InterestQuestionsP
                     }}
                   />
                 </div>
+
+                {/* Category Navigation Pills */}
+                {totalCategories > 1 && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: '8px',
+                      overflowX: 'auto',
+                      paddingBottom: '6px',
+                      marginBottom: '12px',
+                    }}
+                  >
+                    {categoriesQuestions.map((cq, idx) => {
+                      const isSelected = idx === currentCatIndex;
+                      const catAns = answers[cq.category] || {};
+                      const answeredCount = Object.values(catAns).filter((v) => v && v !== 'skipped').length;
+                      const isComplete = answeredCount >= 4;
+                      return (
+                        <button
+                          key={cq.category}
+                          type="button"
+                          onClick={() => {
+                            setError(null);
+                            setCurrentCatIndex(idx);
+                          }}
+                          style={{
+                            padding: '6px 14px',
+                            borderRadius: '999px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            whiteSpace: 'nowrap',
+                            border: isSelected ? '1.5px solid var(--coral)' : '1px solid #ebdcd0',
+                            background: isSelected ? 'var(--coral)' : isComplete ? 'var(--peach)' : '#ffffff',
+                            color: isSelected ? '#ffffff' : isComplete ? 'var(--coral-dark)' : 'var(--ink)',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          {isComplete ? '✓ ' : ''}{cq.categoryLabel}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
 
                 <h1 style={{ fontSize: '26px', marginBottom: '4px' }}>
                   {currentCategoryData.categoryLabel}
