@@ -5,21 +5,23 @@
 
 async function sendVerificationEmail({ email, fullName, code }) {
   // In test environment, bypass actual HTTP dispatch to Brevo
-  if (process.env.NODE_ENV === 'test') {
-    return { success: true, testMode: true };
+  if (process.env.NODE_ENV === "test") {
+    return { success: true, testMode: true }
   }
 
-  const apiKey = process.env.BREVO_API_KEY;
-  const senderEmail = process.env.BREVO_SENDER_EMAIL || 'support@saanjh.com';
-  const senderName = 'Saanjh';
+  const apiKey = process.env.BREVO_API_KEY
+  const senderEmail = process.env.BREVO_SENDER_EMAIL || "support@saanjh.com"
+  const senderName = "Saanjh"
 
-  if (!apiKey || apiKey.trim() === '' || apiKey === 'your_brevo_api_key_here') {
+  if (!apiKey || apiKey.trim() === "" || apiKey === "your_brevo_api_key_here") {
     // Brevo is not configured
-    console.warn('[EmailService] Brevo API key is not configured. Email cannot be dispatched.');
-    throw new Error("Couldn't send the code, try again");
+    console.warn(
+      "[EmailService] Brevo API key is not configured. Email cannot be dispatched.",
+    )
+    throw new Error("Couldn't send the code, try again")
   }
 
-  const subject = `${code} is your Saanjh verification code`;
+  const subject = `${code} is your Saanjh verification code`
 
   const htmlContent = `
 <!DOCTYPE html>
@@ -43,7 +45,7 @@ async function sendVerificationEmail({ email, fullName, code }) {
   <div class="container">
     <a href="#" class="logo">Saanjh<span>.</span></a>
     <h1>Verify your email</h1>
-    <p>Hello ${fullName || 'there'},</p>
+    <p>Hello ${fullName || "there"},</p>
     <p>Welcome to Saanjh. Use the 6-digit code below to verify your email address and continue setting up your profile.</p>
     
     <div class="code-box">
@@ -60,24 +62,24 @@ async function sendVerificationEmail({ email, fullName, code }) {
   </div>
 </body>
 </html>
-`;
+`
 
-  const textContent = `Hello ${fullName || 'there'},
+  const textContent = `Hello ${fullName || "there"},
 
 Welcome to Saanjh. Your verification code is: ${code}
 
 This code expires in 10 minutes. If you did not request this, please ignore this email.
 
 With care,
-The Saanjh Team`;
+The Saanjh Team`
 
   try {
-    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'POST',
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
       headers: {
-        'api-key': apiKey,
-        'content-type': 'application/json',
-        accept: 'application/json',
+        "api-key": apiKey,
+        "content-type": "application/json",
+        accept: "application/json",
       },
       body: JSON.stringify({
         sender: {
@@ -87,31 +89,36 @@ The Saanjh Team`;
         to: [
           {
             email,
-            name: fullName || 'Saanjh Member',
+            name: fullName || "Saanjh Member",
           },
         ],
         subject,
         htmlContent,
         textContent,
       }),
-    });
+    })
 
     if (!response.ok) {
-      const errorText = await response.text();
+      const errorText = await response.text()
       // Mask any secrets in logs
-      console.error(`[EmailService] Brevo API request failed with status ${response.status}: ${errorText.substring(0, 150)}`);
-      throw new Error("Couldn't send the code, try again");
+      console.error(
+        `[EmailService] Brevo API request failed with status ${response.status}: ${errorText.substring(0, 150)}`,
+      )
+      throw new Error("Couldn't send the code, try again")
     }
 
-    return { success: true };
+    return { success: true }
   } catch (error) {
     if (error.message !== "Couldn't send the code, try again") {
-      console.error('[EmailService] Network or unexpected error calling Brevo:', error.message);
+      console.error(
+        "[EmailService] Network or unexpected error calling Brevo:",
+        error.message,
+      )
     }
-    throw new Error("Couldn't send the code, try again");
+    throw new Error("Couldn't send the code, try again")
   }
 }
 
 module.exports = {
   sendVerificationEmail,
-};
+}

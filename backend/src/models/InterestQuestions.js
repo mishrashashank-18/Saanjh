@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose")
 
 const questionItemSchema = new mongoose.Schema(
   {
@@ -19,8 +19,8 @@ const questionItemSchema = new mongoose.Schema(
       default: false,
     },
   },
-  { _id: false }
-);
+  { _id: false },
+)
 
 const interestQuestionsSchema = new mongoose.Schema(
   {
@@ -32,15 +32,15 @@ const interestQuestionsSchema = new mongoose.Schema(
     },
     source: {
       type: String,
-      enum: ['seed', 'gemini'],
-      default: 'seed',
+      enum: ["seed", "gemini"],
+      default: "seed",
     },
     questions: {
       type: [questionItemSchema],
       required: true,
       validate: [
         (val) => val.length === 2,
-        'Each category must have exactly 2 questions',
+        "Each category must have exactly 2 questions",
       ],
     },
   },
@@ -48,14 +48,17 @@ const interestQuestionsSchema = new mongoose.Schema(
     timestamps: true,
     toJSON: {
       transform: function (doc, ret) {
-        ret.id = ret._id ? ret._id.toString() : undefined;
-        delete ret.__v;
-        return ret;
+        ret.id = ret._id ? ret._id.toString() : undefined
+        delete ret.__v
+        return ret
       },
     },
-  }
-);
+  },
+)
 
-const InterestQuestions = mongoose.model('InterestQuestions', interestQuestionsSchema);
+const InterestQuestions = mongoose.model(
+  "InterestQuestions",
+  interestQuestionsSchema,
+)
 
-module.exports = InterestQuestions;
+module.exports = InterestQuestions

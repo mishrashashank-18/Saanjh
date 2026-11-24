@@ -1,10 +1,10 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose")
 
 const emailOtpSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
       index: true,
     },
@@ -35,9 +35,9 @@ const emailOtpSchema = new mongoose.Schema(
   },
   {
     timestamps: false,
-  }
-);
+  },
+)
 
-const EmailOtp = mongoose.model('EmailOtp', emailOtpSchema);
+const EmailOtp = mongoose.model("EmailOtp", emailOtpSchema)
 
-module.exports = EmailOtp;
+module.exports = EmailOtp

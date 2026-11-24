@@ -1,10 +1,10 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose")
 
 const responseEventsSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
       index: true,
     },
@@ -27,16 +27,16 @@ const responseEventsSchema = new mongoose.Schema(
     },
     source: {
       type: String,
-      default: 'user_input',
+      default: "user_input",
     },
   },
   {
     timestamps: { createdAt: true, updatedAt: false },
-  }
-);
+  },
+)
 
-responseEventsSchema.index({ userId: 1, stage: 1, createdAt: -1 });
+responseEventsSchema.index({ userId: 1, stage: 1, createdAt: -1 })
 
-const ResponseEvents = mongoose.model('ResponseEvents', responseEventsSchema);
+const ResponseEvents = mongoose.model("ResponseEvents", responseEventsSchema)
 
-module.exports = ResponseEvents;
+module.exports = ResponseEvents

@@ -1,18 +1,18 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose")
 
 const optionSnapshotSchema = new mongoose.Schema(
   {
     label: { type: String, required: true },
     value: { type: String, required: true },
   },
-  { _id: false }
-);
+  { _id: false },
+)
 
 const interestAnswersSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
       index: true,
     },
@@ -32,13 +32,13 @@ const interestAnswersSchema = new mongoose.Schema(
     dimension: {
       type: String,
       enum: [
-        'frequency',
-        'intensity',
-        'social_preference',
-        'style_preference',
-        'depth',
-        'openness_to_new',
-        'shared_activity',
+        "frequency",
+        "intensity",
+        "social_preference",
+        "style_preference",
+        "depth",
+        "openness_to_new",
+        "shared_activity",
       ],
       required: true,
     },
@@ -60,21 +60,21 @@ const interestAnswersSchema = new mongoose.Schema(
     },
     generatedBy: {
       type: String,
-      enum: ['gemini', 'seed'],
-      default: 'gemini',
+      enum: ["gemini", "seed"],
+      default: "gemini",
     },
     model: {
       type: String,
-      default: 'gemini-3.5-flash-lite',
+      default: "gemini-3.5-flash-lite",
     },
     promptVersion: {
       type: String,
-      default: 'v1.0',
+      default: "v1.0",
     },
     sharePreference: {
       type: String,
-      enum: ['must-have', 'nice-to-have', 'doesnt-matter', ''],
-      default: '',
+      enum: ["must-have", "nice-to-have", "doesnt-matter", ""],
+      default: "",
     },
     skipped: {
       type: Boolean,
@@ -93,17 +93,19 @@ const interestAnswersSchema = new mongoose.Schema(
     timestamps: true,
     toJSON: {
       transform: function (doc, ret) {
-        ret.id = ret._id ? ret._id.toString() : undefined;
-        delete ret.__v;
-        return ret;
+        ret.id = ret._id ? ret._id.toString() : undefined
+        delete ret.__v
+        return ret
       },
     },
-  }
-);
+  },
+)
 
-interestAnswersSchema.index({ userId: 1, category: 1, questionIndex: 1 }, { unique: true });
-interestAnswersSchema.index({ userId: 1, isArchived: 1 });
+interestAnswersSchema.index({ userId: 1, category: 1, questionIndex: 1 }, {
+  unique: true,
+})
+interestAnswersSchema.index({ userId: 1, isArchived: 1 })
 
-const InterestAnswers = mongoose.model('InterestAnswers', interestAnswersSchema);
+const InterestAnswers = mongoose.model("InterestAnswers", interestAnswersSchema)
 
-module.exports = InterestAnswers;
+module.exports = InterestAnswers

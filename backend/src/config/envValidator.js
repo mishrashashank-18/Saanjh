@@ -3,20 +3,20 @@
  */
 
 const requiredVars = [
-  'MONGODB_URI',
-  'BREVO_API_KEY',
-  'BREVO_SENDER_EMAIL',
-  'JWT_ACCESS_SECRET',
-  'JWT_REFRESH_SECRET',
-  'OTP_PEPPER',
-  'GEMINI_API_KEY',
-];
+  "MONGODB_URI",
+  "BREVO_API_KEY",
+  "BREVO_SENDER_EMAIL",
+  "JWT_ACCESS_SECRET",
+  "JWT_REFRESH_SECRET",
+  "OTP_PEPPER",
+  "GEMINI_API_KEY",
+]
 
 function validateEnv() {
-  const missing = [];
+  const missing = []
   for (const v of requiredVars) {
-    if (!process.env[v] || process.env[v].trim() === '') {
-      missing.push(v);
+    if (!process.env[v] || process.env[v].trim() === "") {
+      missing.push(v)
     }
   }
 
@@ -24,23 +24,23 @@ function validateEnv() {
     const errorMsg =
       `\n======================================================\n` +
       `[Saanjh Backend Error] Missing required environment variables:\n` +
-      missing.map((v) => `  - ${v}`).join('\n') +
+      missing.map((v) => `  - ${v}`).join("\n") +
       `\n\nPlease configure these in backend/.env before running the server.\n` +
       `Refer to backend/.env.example for required definitions.\n` +
-      `======================================================\n`;
+      `======================================================\n`
 
-    if (process.env.NODE_ENV === 'production') {
-      console.error(errorMsg);
-      process.exit(1);
+    if (process.env.NODE_ENV === "production") {
+      console.error(errorMsg)
+      process.exit(1)
     } else {
-      console.warn(errorMsg);
+      console.warn(errorMsg)
     }
   }
 
-  return missing;
+  return missing
 }
 
 module.exports = {
   validateEnv,
   requiredVars,
-};
+}

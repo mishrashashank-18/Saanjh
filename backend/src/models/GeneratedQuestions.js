@@ -1,12 +1,12 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose")
 
 const optionSchema = new mongoose.Schema(
   {
     label: { type: String, required: true },
     value: { type: String, required: true },
   },
-  { _id: false }
-);
+  { _id: false },
+)
 
 const generatedQuestionItemSchema = new mongoose.Schema(
   {
@@ -15,13 +15,13 @@ const generatedQuestionItemSchema = new mongoose.Schema(
     dimension: {
       type: String,
       enum: [
-        'frequency',
-        'intensity',
-        'social_preference',
-        'style_preference',
-        'depth',
-        'openness_to_new',
-        'shared_activity',
+        "frequency",
+        "intensity",
+        "social_preference",
+        "style_preference",
+        "depth",
+        "openness_to_new",
+        "shared_activity",
       ],
       required: true,
     },
@@ -30,8 +30,8 @@ const generatedQuestionItemSchema = new mongoose.Schema(
     isSensitive: { type: Boolean, default: false },
     skippable: { type: Boolean, default: false },
   },
-  { _id: false }
-);
+  { _id: false },
+)
 
 const generatedQuestionsSchema = new mongoose.Schema(
   {
@@ -43,7 +43,7 @@ const generatedQuestionsSchema = new mongoose.Schema(
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
       index: true,
     },
@@ -61,30 +61,33 @@ const generatedQuestionsSchema = new mongoose.Schema(
       required: true,
       validate: [
         (val) => val.length === 5,
-        'Each category must have exactly 5 questions (4 generated/seeded + Question 5)',
+        "Each category must have exactly 5 questions (4 generated/seeded + Question 5)",
       ],
     },
     source: {
       type: String,
-      enum: ['gemini', 'seed'],
-      default: 'gemini',
+      enum: ["gemini", "seed"],
+      default: "gemini",
     },
     model: {
       type: String,
-      default: 'gemini-3.5-flash-lite',
+      default: "gemini-3.5-flash-lite",
     },
     promptVersion: {
       type: String,
-      default: 'v1.0',
+      default: "v1.0",
     },
   },
   {
     timestamps: true,
-  }
-);
+  },
+)
 
-generatedQuestionsSchema.index({ userId: 1, category: 1 });
+generatedQuestionsSchema.index({ userId: 1, category: 1 })
 
-const GeneratedQuestions = mongoose.model('GeneratedQuestions', generatedQuestionsSchema);
+const GeneratedQuestions = mongoose.model(
+  "GeneratedQuestions",
+  generatedQuestionsSchema,
+)
 
-module.exports = GeneratedQuestions;
+module.exports = GeneratedQuestions

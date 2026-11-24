@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose")
 
 const interestCatalogSchema = new mongoose.Schema(
   {
@@ -26,14 +26,14 @@ const interestCatalogSchema = new mongoose.Schema(
     timestamps: true,
     toJSON: {
       transform: function (doc, ret) {
-        ret.id = ret._id ? ret._id.toString() : undefined;
-        delete ret.__v;
-        return ret;
+        ret.id = ret._id ? ret._id.toString() : undefined
+        delete ret.__v
+        return ret
       },
     },
-  }
-);
+  },
+)
 
-const InterestCatalog = mongoose.model('InterestCatalog', interestCatalogSchema);
+const InterestCatalog = mongoose.model("InterestCatalog", interestCatalogSchema)
 
-module.exports = InterestCatalog;
+module.exports = InterestCatalog

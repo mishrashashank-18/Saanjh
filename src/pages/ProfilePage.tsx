@@ -1,48 +1,48 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import React, { useState, useEffect } from "react"
+import { useAuth } from "../context/AuthContext"
 
 interface ProfilePageProps {
-  onNavigate: (path: string) => void;
+  onNavigate: (path: string) => void
 }
 
 export default function ProfilePage({ onNavigate }: ProfilePageProps) {
-  const { user, logout, updateProfile } = useAuth();
+  const { user, logout, updateProfile } = useAuth()
 
-  const [fullName, setFullName] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [bio, setBio] = useState('');
-  const [city, setCity] = useState('');
-  const [occupation, setOccupation] = useState('');
-  const [education, setEducation] = useState('');
-  const [genderIdentity, setGenderIdentity] = useState('');
-  const [mobileNumber, setMobileNumber] = useState('');
+  const [fullName, setFullName] = useState("")
+  const [displayName, setDisplayName] = useState("")
+  const [bio, setBio] = useState("")
+  const [city, setCity] = useState("")
+  const [occupation, setOccupation] = useState("")
+  const [education, setEducation] = useState("")
+  const [genderIdentity, setGenderIdentity] = useState("")
+  const [mobileNumber, setMobileNumber] = useState("")
 
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     if (!user) {
-      onNavigate('/login');
-      return;
+      onNavigate("/login")
+      return
     }
-    setFullName(user.fullName || '');
-    setDisplayName(user.displayName || '');
-    setBio(user.bio || '');
-    setCity(user.city || '');
-    setOccupation(user.occupation || '');
-    setEducation(user.education || '');
-    setGenderIdentity(user.genderIdentity || '');
-    setMobileNumber(user.mobileNumber || '');
-  }, [user, onNavigate]);
+    setFullName(user.fullName || "")
+    setDisplayName(user.displayName || "")
+    setBio(user.bio || "")
+    setCity(user.city || "")
+    setOccupation(user.occupation || "")
+    setEducation(user.education || "")
+    setGenderIdentity(user.genderIdentity || "")
+    setMobileNumber(user.mobileNumber || "")
+  }, [user, onNavigate])
 
-  if (!user) return null;
+  if (!user) return null
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setSuccess(null);
-    setIsSubmitting(true);
+    e.preventDefault()
+    setError(null)
+    setSuccess(null)
+    setIsSubmitting(true)
 
     try {
       await updateProfile({
@@ -54,19 +54,19 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
         education,
         genderIdentity,
         mobileNumber,
-      });
-      setSuccess('Your profile has been updated successfully!');
-      setTimeout(() => setSuccess(null), 3500);
+      })
+      setSuccess("Your profile has been updated successfully!")
+      setTimeout(() => setSuccess(null), 3500)
     } catch (err: any) {
-      setError(err.message || 'Failed to update profile.');
+      setError(err.message || "Failed to update profile.")
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
   }
 
   async function handleLogout() {
-    await logout();
-    onNavigate('/');
+    await logout()
+    onNavigate("/")
   }
 
   return (
@@ -84,7 +84,7 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
             </div>
             <div className="profile-header-details">
               <span className="profile-badge">
-                {user.emailVerified ? '✓ Verified Member' : 'Saanjh Member'}
+                {user.emailVerified ? "✓ Verified Member" : "Saanjh Member"}
               </span>
               <h1>{user.displayName || user.fullName}</h1>
               <p>{user.email}</p>
@@ -214,12 +214,12 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
                 className="auth-submit-btn profile-save-btn"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Saving Changes...' : 'Save Profile Changes'}
+                {isSubmitting ? "Saving Changes..." : "Save Profile Changes"}
               </button>
               <button
                 type="button"
                 className="auth-cancel-btn"
-                onClick={() => onNavigate('/')}
+                onClick={() => onNavigate("/")}
               >
                 Done
               </button>
@@ -228,5 +228,5 @@ export default function ProfilePage({ onNavigate }: ProfilePageProps) {
         </div>
       </main>
     </div>
-  );
+  )
 }

@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose")
 
 const questionBankSchema = new mongoose.Schema(
   {
@@ -20,13 +20,13 @@ const questionBankSchema = new mongoose.Schema(
     dimension: {
       type: String,
       enum: [
-        'frequency',
-        'intensity',
-        'social_preference',
-        'style_preference',
-        'depth',
-        'openness_to_new',
-        'shared_activity',
+        "frequency",
+        "intensity",
+        "social_preference",
+        "style_preference",
+        "depth",
+        "openness_to_new",
+        "shared_activity",
       ],
       required: true,
     },
@@ -51,16 +51,16 @@ const questionBankSchema = new mongoose.Schema(
     },
     version: {
       type: String,
-      default: 'v1.0',
+      default: "v1.0",
     },
   },
   {
     timestamps: true,
-  }
-);
+  },
+)
 
-questionBankSchema.index({ category: 1, questionIndex: 1 });
+questionBankSchema.index({ category: 1, questionIndex: 1 })
 
-const QuestionBank = mongoose.model('QuestionBank', questionBankSchema);
+const QuestionBank = mongoose.model("QuestionBank", questionBankSchema)
 
-module.exports = QuestionBank;
+module.exports = QuestionBank

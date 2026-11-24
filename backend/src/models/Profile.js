@@ -1,17 +1,17 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose")
 
 const profileSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
       unique: true,
       index: true,
     },
     genderPreference: {
       type: [String],
-      default: ['everyone'],
+      default: ["everyone"],
     },
     ageRange: {
       min: {
@@ -27,13 +27,13 @@ const profileSchema = new mongoose.Schema(
     },
     relationshipGoal: {
       type: String,
-      enum: ['long-term', 'casual', 'friendship', 'unsure', ''],
-      default: '',
+      enum: ["long-term", "casual", "friendship", "unsure", ""],
+      default: "",
     },
     city: {
       type: String,
       trim: true,
-      default: '',
+      default: "",
     },
     maxDistanceKm: {
       type: Number,
@@ -53,23 +53,30 @@ const profileSchema = new mongoose.Schema(
     },
     goingOutFrequency: {
       type: String,
-      enum: ['rarely', 'sometimes', 'often', 'very-often', ''],
-      default: '',
+      enum: ["rarely", "sometimes", "often", "very-often", ""],
+      default: "",
     },
     culturalImportance: {
       type: String,
-      enum: ['not-important', 'a-little', 'somewhat', 'very-important', 'prefer-not-to-say', ''],
-      default: '',
+      enum: [
+        "not-important",
+        "a-little",
+        "somewhat",
+        "very-important",
+        "prefer-not-to-say",
+        "",
+      ],
+      default: "",
     },
     dealBreakers: {
       type: String,
       maxlength: 500,
-      default: '',
+      default: "",
     },
     notes: {
       type: String,
       maxlength: 500,
-      default: '',
+      default: "",
     },
     completedAt: {
       type: Date,
@@ -77,21 +84,21 @@ const profileSchema = new mongoose.Schema(
     },
     responseVersion: {
       type: String,
-      default: 'v1.0',
+      default: "v1.0",
     },
   },
   {
     timestamps: true,
     toJSON: {
       transform: function (doc, ret) {
-        ret.id = ret._id ? ret._id.toString() : undefined;
-        delete ret.__v;
-        return ret;
+        ret.id = ret._id ? ret._id.toString() : undefined
+        delete ret.__v
+        return ret
       },
     },
-  }
-);
+  },
+)
 
-const Profile = mongoose.model('Profile', profileSchema);
+const Profile = mongoose.model("Profile", profileSchema)
 
-module.exports = Profile;
+module.exports = Profile

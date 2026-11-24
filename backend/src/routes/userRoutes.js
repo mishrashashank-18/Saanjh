@@ -1,16 +1,18 @@
-const express = require('express');
-const userController = require('../controllers/userController');
-const { authenticate } = require('../middleware/authMiddleware');
+const express = require("express")
+const userController = require("../controllers/userController")
+const { authenticate } = require("../middleware/authMiddleware")
 
-const router = express.Router();
+const router = express.Router()
 
 // All user routes require authentication
-router.use(authenticate);
+router.use(authenticate)
 
-router.get('/me', userController.getMe);
-router.get('/me/data', userController.downloadMyData);
-router.delete('/me', userController.deleteMyAccount);
-router.patch('/me', userController.updateMe);
-router.post('/me/photo', userController.updatePhoto);
+router.get("/me", userController.getMe)
+router.get("/me/data", userController.downloadMyData)
+router.delete("/me", userController.deleteMyAccount)
+router.patch("/me", userController.updateMe)
+router.post("/me/photo", userController.updatePhoto)
+router.post("/me/photo/upload", userController.uploadPhotoCloudinary)
+router.get("/me/photo/cloudinary-config", userController.getCloudinaryConfig)
 
-module.exports = router;
+module.exports = router

@@ -1,10 +1,10 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose")
 
 const userInterestsSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
       unique: true,
       index: true,
@@ -27,21 +27,21 @@ const userInterestsSchema = new mongoose.Schema(
     },
     responseVersion: {
       type: String,
-      default: 'v1.0',
+      default: "v1.0",
     },
   },
   {
     timestamps: true,
     toJSON: {
       transform: function (doc, ret) {
-        ret.id = ret._id ? ret._id.toString() : undefined;
-        delete ret.__v;
-        return ret;
+        ret.id = ret._id ? ret._id.toString() : undefined
+        delete ret.__v
+        return ret
       },
     },
-  }
-);
+  },
+)
 
-const UserInterests = mongoose.model('UserInterests', userInterestsSchema);
+const UserInterests = mongoose.model("UserInterests", userInterestsSchema)
 
-module.exports = UserInterests;
+module.exports = UserInterests

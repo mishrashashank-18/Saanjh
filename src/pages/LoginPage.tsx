@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../context/AuthContext';
+import React, { useState, useEffect, useRef } from "react"
+import { useAuth } from "../context/AuthContext"
 
 interface LoginPageProps {
-  onNavigate: (path: string) => void;
+  onNavigate: (path: string) => void
 }
 
 function GoogleIcon() {
@@ -25,152 +25,174 @@ function GoogleIcon() {
         d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
       />
     </svg>
-  );
+  )
 }
 
 function EyeIcon({ visible }: { visible: boolean }) {
   if (visible) {
     return (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
         <circle cx="12" cy="12" r="3" />
       </svg>
-    );
+    )
   }
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
       <line x1="1" y1="1" x2="23" y2="23" />
     </svg>
-  );
+  )
 }
 
 export default function LoginPage({ onNavigate }: LoginPageProps) {
-  const { user, login, loginWithGoogle } = useAuth();
-  const googleBtnContainerRef = useRef<HTMLDivElement>(null);
-  const [isGoogleRendered, setIsGoogleRendered] = useState(false);
+  const { user, login, loginWithGoogle } = useAuth()
+  const googleBtnContainerRef = useRef<HTMLDivElement>(null)
+  const [isGoogleRendered, setIsGoogleRendered] = useState(false)
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // If already logged in, redirect or display status
   useEffect(() => {
     if (user) {
-      onNavigate('/');
+      onNavigate("/")
     }
-  }, [user, onNavigate]);
+  }, [user, onNavigate])
 
   // Google Identity Services setup
   useEffect(() => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    if (!clientId || !window.google?.accounts?.id) return;
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+    if (!clientId || !window.google?.accounts?.id) return
 
     try {
       window.google.accounts.id.initialize({
         client_id: clientId,
         callback: async (response: any) => {
           if (response?.credential) {
-            setIsSubmitting(true);
-            setError(null);
+            setIsSubmitting(true)
+            setError(null)
             try {
-              const loggedInUser = await loginWithGoogle(response.credential);
-              if (loggedInUser.onboardingStep === 'google_complete') {
-                onNavigate('/onboarding/google-complete');
-              } else if (loggedInUser.onboardingStep === 'profile') {
-                onNavigate('/onboarding/profile');
-              } else if (loggedInUser.onboardingStep === 'interests') {
-                onNavigate('/onboarding/interests');
-              } else if (loggedInUser.onboardingStep === 'interest_questions') {
-                onNavigate('/onboarding/interest-questions');
+              const loggedInUser = await loginWithGoogle(response.credential)
+              if (loggedInUser.onboardingStep === "google_complete") {
+                onNavigate("/onboarding/google-complete")
+              } else if (loggedInUser.onboardingStep === "profile") {
+                onNavigate("/onboarding/profile")
+              } else if (loggedInUser.onboardingStep === "interests") {
+                onNavigate("/onboarding/interests")
+              } else if (loggedInUser.onboardingStep === "interest_questions") {
+                onNavigate("/onboarding/interest-questions")
               } else {
-                onNavigate('/dashboard');
+                onNavigate("/dashboard")
               }
             } catch (err: any) {
-              setError(err.message || 'Google sign-in failed');
+              setError(err.message || "Google sign-in failed")
             } finally {
-              setIsSubmitting(false);
+              setIsSubmitting(false)
             }
           }
         },
-      });
+      })
 
       if (googleBtnContainerRef.current) {
-        googleBtnContainerRef.current.innerHTML = '';
+        googleBtnContainerRef.current.innerHTML = ""
         window.google.accounts.id.renderButton(googleBtnContainerRef.current, {
-          theme: 'outline',
-          size: 'large',
+          theme: "outline",
+          size: "large",
           width: 320,
-          text: 'signin_with',
-          shape: 'pill',
-        });
-        setIsGoogleRendered(true);
+          text: "signin_with",
+          shape: "pill",
+        })
+        setIsGoogleRendered(true)
       }
     } catch (e) {
-      console.warn('Google Identity button note:', e);
+      console.warn("Google Identity button note:", e)
     }
-  }, [loginWithGoogle, onNavigate]);
+  }, [loginWithGoogle, onNavigate])
 
   async function handleGoogleClick() {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
     if (!clientId) {
       setError(
-        'Google Login is in setup mode. Please set VITE_GOOGLE_CLIENT_ID in .env and GOOGLE_CLIENT_ID in backend/.env.'
-      );
-      return;
+        "Google Login is in setup mode. Please set VITE_GOOGLE_CLIENT_ID in .env and GOOGLE_CLIENT_ID in backend/.env.",
+      )
+      return
     }
 
     if (window.google?.accounts?.id) {
       window.google.accounts.id.prompt((notification: any) => {
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          setError('Google Sign-in prompt was closed. Please try clicking the button again.');
+          setError(
+            "Google Sign-in prompt was closed. Please try clicking the button again.",
+          )
         }
-      });
+      })
     } else {
-      setError('Google Sign-in is currently loading. Please check your connection.');
+      setError(
+        "Google Sign-in is currently loading. Please check your connection.",
+      )
     }
   }
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
+    e.preventDefault()
+    setError(null)
 
     if (!email.trim()) {
-      setError('Please enter your email address');
-      return;
+      setError("Please enter your email address")
+      return
     }
     if (!password) {
-      setError('Please enter your password');
-      return;
+      setError("Please enter your password")
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      const loggedInUser = await login({ email, password });
-      if (loggedInUser.onboardingStep === 'verify') {
-        onNavigate('/verify-email');
-      } else if (loggedInUser.onboardingStep === 'google_complete') {
-        onNavigate('/onboarding/google-complete');
-      } else if (loggedInUser.onboardingStep === 'profile') {
-        onNavigate('/onboarding/profile');
-      } else if (loggedInUser.onboardingStep === 'interests') {
-        onNavigate('/onboarding/interests');
-      } else if (loggedInUser.onboardingStep === 'interest_questions') {
-        onNavigate('/onboarding/interest-questions');
+      const loggedInUser = await login({ email, password })
+      if (loggedInUser.onboardingStep === "verify") {
+        onNavigate("/verify-email")
+      } else if (loggedInUser.onboardingStep === "google_complete") {
+        onNavigate("/onboarding/google-complete")
+      } else if (loggedInUser.onboardingStep === "profile") {
+        onNavigate("/onboarding/profile")
+      } else if (loggedInUser.onboardingStep === "interests") {
+        onNavigate("/onboarding/interests")
+      } else if (loggedInUser.onboardingStep === "interest_questions") {
+        onNavigate("/onboarding/interest-questions")
       } else {
-        onNavigate('/dashboard');
+        onNavigate("/dashboard")
       }
     } catch (err: any) {
-      if (err.data?.code === 'UNVERIFIED_EMAIL') {
-        onNavigate('/verify-email');
-        return;
+      if (err.data?.code === "UNVERIFIED_EMAIL") {
+        onNavigate("/verify-email")
+        return
       }
-      setError(err.message || 'Invalid email or password. Please try again.');
+      setError(err.message || "Invalid email or password. Please try again.")
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
   }
 
@@ -185,7 +207,9 @@ export default function LoginPage({ onNavigate }: LoginPageProps) {
               <div className="auth-visual-badge">More Than a Match</div>
               <h2>Where meaningful connections begin.</h2>
               <p>
-                Saanjh looks beyond surface-level swipes. We connect thoughtful people based on shared values, lifestyle rhythms, and authentic conversations.
+                Saanjh looks beyond surface-level swipes. We connect thoughtful
+                people based on shared values, lifestyle rhythms, and authentic
+                conversations.
               </p>
 
               <div className="auth-visual-image-wrap">
@@ -197,7 +221,10 @@ export default function LoginPage({ onNavigate }: LoginPageProps) {
 
               <div className="auth-visual-quote">
                 <b>“</b>
-                <span>The questions made all the difference. Real conversations, zero games.</span>
+                <span>
+                  The questions made all the difference. Real conversations,
+                  zero games.
+                </span>
               </div>
 
               <div className="auth-visual-tags">
@@ -215,7 +242,9 @@ export default function LoginPage({ onNavigate }: LoginPageProps) {
               <div className="auth-form-header">
                 <span className="auth-form-tag">Welcome Back</span>
                 <h1>Sign in to your account</h1>
-                <p>Enter your details to view your matches and conversations.</p>
+                <p>
+                  Enter your details to view your matches and conversations.
+                </p>
               </div>
 
               {error && (
@@ -227,7 +256,10 @@ export default function LoginPage({ onNavigate }: LoginPageProps) {
 
               {/* Google Sign-In */}
               <div className="auth-page-google">
-                <div ref={googleBtnContainerRef} className="google-btn-rendered" />
+                <div
+                  ref={googleBtnContainerRef}
+                  className="google-btn-rendered"
+                />
                 {!isGoogleRendered && (
                   <button
                     type="button"
@@ -265,7 +297,11 @@ export default function LoginPage({ onNavigate }: LoginPageProps) {
                     <button
                       type="button"
                       className="auth-forgot-link"
-                      onClick={() => alert("Password recovery: Please contact support or sign in with Google.")}
+                      onClick={() =>
+                        alert(
+                          "Password recovery: Please contact support or sign in with Google.",
+                        )
+                      }
                     >
                       Forgot?
                     </button>
@@ -273,7 +309,7 @@ export default function LoginPage({ onNavigate }: LoginPageProps) {
                   <div className="auth-input-password-wrap">
                     <input
                       id="page-login-password"
-                      type={showPassword ? 'text' : 'password'}
+                      type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -284,7 +320,9 @@ export default function LoginPage({ onNavigate }: LoginPageProps) {
                       type="button"
                       className="auth-eye-btn"
                       onClick={() => setShowPassword(!showPassword)}
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      aria-label={
+                        showPassword ? "Hide password" : "Show password"
+                      }
                     >
                       <EyeIcon visible={showPassword} />
                     </button>
@@ -307,25 +345,25 @@ export default function LoginPage({ onNavigate }: LoginPageProps) {
                   className="auth-submit-btn"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? 'Signing in...' : 'Sign In to Saanjh →'}
+                  {isSubmitting ? "Signing in..." : "Sign In to Saanjh →"}
                 </button>
               </form>
 
               <div className="auth-footer-prompt">
                 <p>
-                  Don’t have an account yet?{' '}
+                  Don’t have an account yet?{" "}
                   <button
                     type="button"
-                    onClick={() => onNavigate('/signup')}
+                    onClick={() => onNavigate("/signup")}
                     className="auth-switch-link"
                   >
                     Create an account here →
                   </button>
                 </p>
-                <p style={{ marginTop: '10px' }}>
+                <p style={{ marginTop: "10px" }}>
                   <button
                     type="button"
-                    onClick={() => onNavigate('/')}
+                    onClick={() => onNavigate("/")}
                     className="auth-back-simple"
                   >
                     ← Back to website
@@ -337,5 +375,5 @@ export default function LoginPage({ onNavigate }: LoginPageProps) {
         </div>
       </main>
     </div>
-  );
+  )
 }

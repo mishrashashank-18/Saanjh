@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { ApiError } from '../services/api';
+import React, { useState, useEffect, useRef } from "react"
+import { useAuth } from "../context/AuthContext"
+import { ApiError } from "../services/api"
 
 declare global {
   interface Window {
-    google?: any;
+    google?: any
   }
 }
 
@@ -28,24 +28,42 @@ function GoogleIcon() {
         d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
       />
     </svg>
-  );
+  )
 }
 
 function EyeIcon({ visible }: { visible: boolean }) {
   if (visible) {
     return (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
         <circle cx="12" cy="12" r="3" />
       </svg>
-    );
+    )
   }
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
       <line x1="1" y1="1" x2="23" y2="23" />
     </svg>
-  );
+  )
 }
 
 export default function AuthModal() {
@@ -61,194 +79,205 @@ export default function AuthModal() {
     loginWithGoogle,
     logout,
     updateProfile,
-  } = useAuth();
+  } = useAuth()
 
-  const googleBtnContainerRef = useRef<HTMLDivElement>(null);
-  const [isGoogleRendered, setIsGoogleRendered] = useState(false);
+  const googleBtnContainerRef = useRef<HTMLDivElement>(null)
+  const [isGoogleRendered, setIsGoogleRendered] = useState(false)
 
   // Form states
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [fullName, setFullName] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [mobileNumber, setMobileNumber] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState('');
-  const [genderIdentity, setGenderIdentity] = useState('');
-  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [fullName, setFullName] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [mobileNumber, setMobileNumber] = useState("")
+  const [dateOfBirth, setDateOfBirth] = useState("")
+  const [genderIdentity, setGenderIdentity] = useState("")
+  const [termsAccepted, setTermsAccepted] = useState(false)
 
   // Profile Edit states
-  const [profileFullName, setProfileFullName] = useState('');
-  const [profileDisplayName, setProfileDisplayName] = useState('');
-  const [profileBio, setProfileBio] = useState('');
-  const [profileCity, setProfileCity] = useState('');
-  const [profileOccupation, setProfileOccupation] = useState('');
-  const [profileEducation, setProfileEducation] = useState('');
-  const [profileGender, setProfileGender] = useState('');
+  const [profileFullName, setProfileFullName] = useState("")
+  const [profileDisplayName, setProfileDisplayName] = useState("")
+  const [profileBio, setProfileBio] = useState("")
+  const [profileCity, setProfileCity] = useState("")
+  const [profileOccupation, setProfileOccupation] = useState("")
+  const [profileEducation, setProfileEducation] = useState("")
+  const [profileGender, setProfileGender] = useState("")
 
   // Status feedback
-  const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   // Reset or initialize state whenever modal opens or view changes
   useEffect(() => {
-    setError(null);
-    setFieldErrors({});
-    setSuccessMessage(null);
-    setIsSubmitting(false);
+    setError(null)
+    setFieldErrors({})
+    setSuccessMessage(null)
+    setIsSubmitting(false)
 
-    if (user && authModalView === 'profile') {
-      setProfileFullName(user.fullName || '');
-      setProfileDisplayName(user.displayName || '');
-      setProfileBio(user.bio || '');
-      setProfileCity(user.city || '');
-      setProfileOccupation(user.occupation || '');
-      setProfileEducation(user.education || '');
-      setProfileGender(user.genderIdentity || '');
+    if (user && authModalView === "profile") {
+      setProfileFullName(user.fullName || "")
+      setProfileDisplayName(user.displayName || "")
+      setProfileBio(user.bio || "")
+      setProfileCity(user.city || "")
+      setProfileOccupation(user.occupation || "")
+      setProfileEducation(user.education || "")
+      setProfileGender(user.genderIdentity || "")
     }
-  }, [isAuthModalOpen, authModalView, user]);
+  }, [isAuthModalOpen, authModalView, user])
 
   // Handle ESC key to close modal
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape' && isAuthModalOpen) {
-        closeAuthModal();
+      if (e.key === "Escape" && isAuthModalOpen) {
+        closeAuthModal()
       }
     }
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isAuthModalOpen, closeAuthModal]);
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [isAuthModalOpen, closeAuthModal])
 
   // Google Identity Services setup
   useEffect(() => {
-    if (!isAuthModalOpen || authModalView === 'profile') return;
+    if (!isAuthModalOpen || authModalView === "profile") return
 
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    if (!clientId || !window.google?.accounts?.id) return;
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+    if (!clientId || !window.google?.accounts?.id) return
 
     try {
       window.google.accounts.id.initialize({
         client_id: clientId,
         callback: async (response: any) => {
           if (response?.credential) {
-            setIsSubmitting(true);
-            setError(null);
+            setIsSubmitting(true)
+            setError(null)
             try {
-              await loginWithGoogle(response.credential);
+              await loginWithGoogle(response.credential)
             } catch (err: any) {
-              setError(err.message || 'Google sign-in failed');
+              setError(err.message || "Google sign-in failed")
             } finally {
-              setIsSubmitting(false);
+              setIsSubmitting(false)
             }
           }
         },
-      });
+      })
 
       if (googleBtnContainerRef.current) {
-        googleBtnContainerRef.current.innerHTML = '';
+        googleBtnContainerRef.current.innerHTML = ""
         window.google.accounts.id.renderButton(googleBtnContainerRef.current, {
-          theme: 'outline',
-          size: 'large',
+          theme: "outline",
+          size: "large",
           width: 340,
-          text: authModalView === 'signup' ? 'signup_with' : 'signin_with',
-          shape: 'pill',
-        });
-        setIsGoogleRendered(true);
+          text: authModalView === "signup" ? "signup_with" : "signin_with",
+          shape: "pill",
+        })
+        setIsGoogleRendered(true)
       }
     } catch (e) {
-      console.warn('Google Identity button initialization note:', e);
+      console.warn("Google Identity button initialization note:", e)
     }
-  }, [isAuthModalOpen, authModalView, loginWithGoogle]);
+  }, [isAuthModalOpen, authModalView, loginWithGoogle])
 
-  if (!isAuthModalOpen) return null;
+  if (!isAuthModalOpen) return null
 
   // Custom Google Click Handler (fallback if native button not rendered)
   async function handleGoogleButtonClick() {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
     if (!clientId) {
       setError(
-        'Google Login is in preview mode. To connect real Google Sign-In, set VITE_GOOGLE_CLIENT_ID in your .env and GOOGLE_CLIENT_ID in backend/.env.'
-      );
-      return;
+        "Google Login is in preview mode. To connect real Google Sign-In, set VITE_GOOGLE_CLIENT_ID in your .env and GOOGLE_CLIENT_ID in backend/.env.",
+      )
+      return
     }
 
     if (window.google?.accounts?.id) {
       window.google.accounts.id.prompt((notification: any) => {
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          setError('Google Sign-in prompt was closed. Please try clicking the button again.');
+          setError(
+            "Google Sign-in prompt was closed. Please try clicking the button again.",
+          )
         }
-      });
+      })
     } else {
-      setError('Google Sign-in service is currently loading. Please check your internet connection.');
+      setError(
+        "Google Sign-in service is currently loading. Please check your internet connection.",
+      )
     }
   }
 
   // Handle Login submission
   async function handleLoginSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setFieldErrors({});
+    e.preventDefault()
+    setError(null)
+    setFieldErrors({})
 
     if (!email) {
-      setFieldErrors({ email: 'Please enter your email address' });
-      return;
+      setFieldErrors({ email: "Please enter your email address" })
+      return
     }
     if (!password) {
-      setFieldErrors({ password: 'Please enter your password' });
-      return;
+      setFieldErrors({ password: "Please enter your password" })
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      await login({ email, password });
+      await login({ email, password })
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please verify your credentials.');
+      setError(err.message || "Login failed. Please verify your credentials.")
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
   }
 
   // Handle Signup submission
   async function handleSignupSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    const newFieldErrors: Record<string, string> = {};
+    e.preventDefault()
+    setError(null)
+    const newFieldErrors: Record<string, string> = {}
 
-    if (!fullName.trim()) newFieldErrors.fullName = 'Full name is required';
-    if (!email.trim()) newFieldErrors.email = 'Email address is required';
+    if (!fullName.trim()) newFieldErrors.fullName = "Full name is required"
+    if (!email.trim()) newFieldErrors.email = "Email address is required"
     if (!password) {
-      newFieldErrors.password = 'Password is required';
+      newFieldErrors.password = "Password is required"
     } else if (password.length < 8) {
-      newFieldErrors.password = 'Password must be at least 8 characters long';
+      newFieldErrors.password = "Password must be at least 8 characters long"
     } else if (!/^(?=.*[A-Za-z])(?=.*\d)/.test(password)) {
-      newFieldErrors.password = 'Password must contain at least 1 letter and 1 number';
+      newFieldErrors.password =
+        "Password must contain at least 1 letter and 1 number"
     }
 
     if (password !== confirmPassword) {
-      newFieldErrors.confirmPassword = 'Passwords do not match';
+      newFieldErrors.confirmPassword = "Passwords do not match"
     }
 
     if (dateOfBirth) {
-      const dob = new Date(dateOfBirth);
-      const today = new Date();
-      const cutoff = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+      const dob = new Date(dateOfBirth)
+      const today = new Date()
+      const cutoff = new Date(
+        today.getFullYear() - 18,
+        today.getMonth(),
+        today.getDate(),
+      )
       if (dob > cutoff) {
-        newFieldErrors.dateOfBirth = 'You must be at least 18 years old to join Saanjh';
+        newFieldErrors.dateOfBirth =
+          "You must be at least 18 years old to join Saanjh"
       }
     }
 
     if (!termsAccepted) {
-      newFieldErrors.termsAccepted = 'You must accept the terms and privacy policy to continue';
+      newFieldErrors.termsAccepted =
+        "You must accept the terms and privacy policy to continue"
     }
 
     if (Object.keys(newFieldErrors).length > 0) {
-      setFieldErrors(newFieldErrors);
-      return;
+      setFieldErrors(newFieldErrors)
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
       await signup({
         fullName,
@@ -259,26 +288,26 @@ export default function AuthModal() {
         dateOfBirth: dateOfBirth || undefined,
         genderIdentity: genderIdentity || undefined,
         termsAccepted,
-      });
+      })
     } catch (err: any) {
       if (err instanceof ApiError && err.data?.errors) {
-        const backendFieldErrors: Record<string, string> = {};
+        const backendFieldErrors: Record<string, string> = {}
         err.data.errors.forEach((e: any) => {
-          backendFieldErrors[e.field] = e.message;
-        });
-        setFieldErrors(backendFieldErrors);
+          backendFieldErrors[e.field] = e.message
+        })
+        setFieldErrors(backendFieldErrors)
       }
-      setError(err.message || 'Signup failed. Please check the form.');
+      setError(err.message || "Signup failed. Please check the form.")
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
   }
 
   // Handle Profile Update submission
   async function handleProfileSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setIsSubmitting(true);
+    e.preventDefault()
+    setError(null)
+    setIsSubmitting(true)
     try {
       await updateProfile({
         fullName: profileFullName,
@@ -288,13 +317,13 @@ export default function AuthModal() {
         occupation: profileOccupation,
         education: profileEducation,
         genderIdentity: profileGender,
-      });
-      setSuccessMessage('Profile saved successfully!');
-      setTimeout(() => setSuccessMessage(null), 3000);
+      })
+      setSuccessMessage("Profile saved successfully!")
+      setTimeout(() => setSuccessMessage(null), 3000)
     } catch (err: any) {
-      setError(err.message || 'Failed to update profile.');
+      setError(err.message || "Failed to update profile.")
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
   }
 
@@ -302,7 +331,7 @@ export default function AuthModal() {
     <div
       className="auth-modal-backdrop"
       onClick={(e) => {
-        if (e.target === e.currentTarget) closeAuthModal();
+        if (e.target === e.currentTarget) closeAuthModal()
       }}
       role="dialog"
       aria-modal="true"
@@ -321,33 +350,33 @@ export default function AuthModal() {
         <div className="auth-modal-header">
           <span className="auth-brand-badge">Saanjh</span>
           <h2>
-            {authModalView === 'login' && 'Sign in to Saanjh'}
-            {authModalView === 'signup' && 'Create Your Account'}
-            {authModalView === 'profile' && 'Your Saanjh Profile'}
+            {authModalView === "login" && "Sign in to Saanjh"}
+            {authModalView === "signup" && "Create Your Account"}
+            {authModalView === "profile" && "Your Saanjh Profile"}
           </h2>
           <p>
-            {authModalView === 'login' &&
-              'Welcome back to calmer, more meaningful connections.'}
-            {authModalView === 'signup' &&
-              'Answer thoughtful questions and meet people who truly align with you.'}
-            {authModalView === 'profile' &&
-              'Manage your personal details and matchmaking preferences.'}
+            {authModalView === "login" &&
+              "Welcome back to calmer, more meaningful connections."}
+            {authModalView === "signup" &&
+              "Answer thoughtful questions and meet people who truly align with you."}
+            {authModalView === "profile" &&
+              "Manage your personal details and matchmaking preferences."}
           </p>
         </div>
 
         {/* Tabs for Login / Signup (if not in profile view) */}
-        {authModalView !== 'profile' && (
+        {authModalView !== "profile" && (
           <div className="auth-tabs">
             <button
               type="button"
-              className={authModalView === 'login' ? 'active' : ''}
+              className={authModalView === "login" ? "active" : ""}
               onClick={openLogin}
             >
               Sign In
             </button>
             <button
               type="button"
-              className={authModalView === 'signup' ? 'active' : ''}
+              className={authModalView === "signup" ? "active" : ""}
               onClick={openSignup}
             >
               Create Account
@@ -372,7 +401,7 @@ export default function AuthModal() {
         )}
 
         {/* ===================== LOGIN VIEW ===================== */}
-        {authModalView === 'login' && (
+        {authModalView === "login" && (
           <form onSubmit={handleLoginSubmit} className="auth-form" noValidate>
             <div className="auth-field">
               <label htmlFor="login-email">Email Address</label>
@@ -385,7 +414,9 @@ export default function AuthModal() {
                 autoComplete="email"
                 required
               />
-              {fieldErrors.email && <span className="auth-field-error">{fieldErrors.email}</span>}
+              {fieldErrors.email && (
+                <span className="auth-field-error">{fieldErrors.email}</span>
+              )}
             </div>
 
             <div className="auth-field">
@@ -393,7 +424,7 @@ export default function AuthModal() {
               <div className="auth-input-password-wrap">
                 <input
                   id="login-password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -404,7 +435,7 @@ export default function AuthModal() {
                   type="button"
                   className="auth-eye-btn"
                   onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   <EyeIcon visible={showPassword} />
                 </button>
@@ -419,7 +450,7 @@ export default function AuthModal() {
               className="auth-submit-btn"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Signing in...' : 'Sign In →'}
+              {isSubmitting ? "Signing in..." : "Sign In →"}
             </button>
 
             <div className="auth-divider">
@@ -428,7 +459,10 @@ export default function AuthModal() {
 
             {/* Google Authentication Container */}
             <div className="google-auth-section">
-              <div ref={googleBtnContainerRef} className="google-btn-rendered" />
+              <div
+                ref={googleBtnContainerRef}
+                className="google-btn-rendered"
+              />
               {!isGoogleRendered && (
                 <button
                   type="button"
@@ -443,8 +477,12 @@ export default function AuthModal() {
             </div>
 
             <p className="auth-switch-text">
-              Don’t have an account?{' '}
-              <button type="button" onClick={openSignup} className="auth-switch-btn">
+              Don’t have an account?{" "}
+              <button
+                type="button"
+                onClick={openSignup}
+                className="auth-switch-btn"
+              >
                 Create one now
               </button>
             </p>
@@ -452,7 +490,7 @@ export default function AuthModal() {
         )}
 
         {/* ===================== SIGNUP VIEW ===================== */}
-        {authModalView === 'signup' && (
+        {authModalView === "signup" && (
           <form onSubmit={handleSignupSubmit} className="auth-form" noValidate>
             <div className="auth-field">
               <label htmlFor="signup-name">Full Name *</label>
@@ -480,7 +518,9 @@ export default function AuthModal() {
                 autoComplete="email"
                 required
               />
-              {fieldErrors.email && <span className="auth-field-error">{fieldErrors.email}</span>}
+              {fieldErrors.email && (
+                <span className="auth-field-error">{fieldErrors.email}</span>
+              )}
             </div>
 
             <div className="auth-field-row">
@@ -489,7 +529,7 @@ export default function AuthModal() {
                 <div className="auth-input-password-wrap">
                   <input
                     id="signup-password"
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     placeholder="Min 8 chars, 1 letter & 1 number"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -500,21 +540,27 @@ export default function AuthModal() {
                     type="button"
                     className="auth-eye-btn"
                     onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
                   >
                     <EyeIcon visible={showPassword} />
                   </button>
                 </div>
                 {fieldErrors.password && (
-                  <span className="auth-field-error">{fieldErrors.password}</span>
+                  <span className="auth-field-error">
+                    {fieldErrors.password}
+                  </span>
                 )}
               </div>
 
               <div className="auth-field">
-                <label htmlFor="signup-confirm-password">Confirm Password *</label>
+                <label htmlFor="signup-confirm-password">
+                  Confirm Password *
+                </label>
                 <input
                   id="signup-confirm-password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   placeholder="Repeat password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -522,7 +568,9 @@ export default function AuthModal() {
                   required
                 />
                 {fieldErrors.confirmPassword && (
-                  <span className="auth-field-error">{fieldErrors.confirmPassword}</span>
+                  <span className="auth-field-error">
+                    {fieldErrors.confirmPassword}
+                  </span>
                 )}
               </div>
             </div>
@@ -537,7 +585,9 @@ export default function AuthModal() {
                   onChange={(e) => setDateOfBirth(e.target.value)}
                 />
                 {fieldErrors.dateOfBirth && (
-                  <span className="auth-field-error">{fieldErrors.dateOfBirth}</span>
+                  <span className="auth-field-error">
+                    {fieldErrors.dateOfBirth}
+                  </span>
                 )}
               </div>
 
@@ -577,11 +627,14 @@ export default function AuthModal() {
                   onChange={(e) => setTermsAccepted(e.target.checked)}
                 />
                 <span>
-                  I agree to Saanjh’s <b>Terms of Service</b> and <b>Privacy Policy</b>, and confirm I am at least 18 years old.
+                  I agree to Saanjh’s <b>Terms of Service</b> and{" "}
+                  <b>Privacy Policy</b>, and confirm I am at least 18 years old.
                 </span>
               </label>
               {fieldErrors.termsAccepted && (
-                <span className="auth-field-error">{fieldErrors.termsAccepted}</span>
+                <span className="auth-field-error">
+                  {fieldErrors.termsAccepted}
+                </span>
               )}
             </div>
 
@@ -590,7 +643,7 @@ export default function AuthModal() {
               className="auth-submit-btn"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Creating account...' : 'Create Account →'}
+              {isSubmitting ? "Creating account..." : "Create Account →"}
             </button>
 
             <div className="auth-divider">
@@ -599,7 +652,10 @@ export default function AuthModal() {
 
             {/* Google Authentication */}
             <div className="google-auth-section">
-              <div ref={googleBtnContainerRef} className="google-btn-rendered" />
+              <div
+                ref={googleBtnContainerRef}
+                className="google-btn-rendered"
+              />
               {!isGoogleRendered && (
                 <button
                   type="button"
@@ -614,8 +670,12 @@ export default function AuthModal() {
             </div>
 
             <p className="auth-switch-text">
-              Already have an account?{' '}
-              <button type="button" onClick={openLogin} className="auth-switch-btn">
+              Already have an account?{" "}
+              <button
+                type="button"
+                onClick={openLogin}
+                className="auth-switch-btn"
+              >
                 Sign in here
               </button>
             </p>
@@ -623,7 +683,7 @@ export default function AuthModal() {
         )}
 
         {/* ===================== PROFILE VIEW ===================== */}
-        {authModalView === 'profile' && user && (
+        {authModalView === "profile" && user && (
           <form onSubmit={handleProfileSubmit} className="auth-form">
             <div className="profile-banner">
               <div className="profile-avatar-circle">
@@ -637,7 +697,7 @@ export default function AuthModal() {
                 <h3>{user.displayName || user.fullName}</h3>
                 <p>{user.email}</p>
                 <span className="profile-status-tag">
-                  {user.emailVerified ? '✓ Verified Account' : 'Member'}
+                  {user.emailVerified ? "✓ Verified Account" : "Member"}
                 </span>
               </div>
             </div>
@@ -732,7 +792,7 @@ export default function AuthModal() {
                 className="auth-submit-btn profile-save-btn"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Saving...' : 'Save Profile Changes'}
+                {isSubmitting ? "Saving..." : "Save Profile Changes"}
               </button>
               <button
                 type="button"
@@ -746,5 +806,5 @@ export default function AuthModal() {
         )}
       </div>
     </div>
-  );
+  )
 }
